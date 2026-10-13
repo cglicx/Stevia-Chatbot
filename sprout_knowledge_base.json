@@ -1,0 +1,62 @@
+{
+  "dataset_name": "SPROUT AI Knowledge Base Dataset",
+  "crop": "Stevia rebaudiana",
+  "description": "Environmental condition classifications, interpretations, and recommended actions for Stevia cultivation, compiled from horticultural and agronomic research sources for use in SPROUT's rule-based/agentic recommendation engine.",
+  "parameters": [
+    {
+      "parameter": "soil_pH",
+      "unit": "pH",
+      "optimal_range": [6.5, 7.2],
+      "classifications": [
+        {"label": "optimal", "range": [6.5, 7.2], "interpretation": "Nutrient uptake and root health are at their best; ideal for steviol glycoside development.", "recommendation": "Maintain current soil pH; no amendment needed."},
+        {"label": "too_acidic", "range": [0, 6.4], "interpretation": "Acidic soil limits nutrient availability (calcium, magnesium) and can stunt growth.", "recommendation": "Apply agricultural lime or dolomite to raise pH gradually; retest after 1-2 weeks."},
+        {"label": "too_alkaline", "range": [7.3, 14], "interpretation": "Alkaline soil reduces iron and micronutrient uptake, causing chlorosis.", "recommendation": "Apply elemental sulfur or organic compost to lower pH gradually."}
+      ],
+      "sources": ["https://plantly.io/plant-care/how-to-grow/stevia-plants/", "https://www.growbycity.com/plant/stevia/", "https://bonnieplants.com/blogs/how-to-grow/growing-stevia", "https://www.epicgardening.com/stevia/"]
+    },
+    {
+      "parameter": "temperature",
+      "unit": "celsius",
+      "optimal_range": [18, 28],
+      "classifications": [
+        {"label": "optimal", "range": [18, 28], "interpretation": "Ideal daytime growth range; supports steady vegetative growth and leaf sweetness.", "recommendation": "Maintain current conditions; monitor peak daytime heat."},
+        {"label": "cool_suboptimal", "range": [15.5, 17.9], "interpretation": "Below ~60F at night suppresses growth; prolonged exposure risks stunting.", "recommendation": "Advise row covers or activate heating control; delay watering."},
+        {"label": "frost_critical", "range": [0, 7.2], "interpretation": "Below ~45F, stevia will not tolerate exposure; risk of plant death.", "recommendation": "Trigger critical alert; recommend immediate frost protection."},
+        {"label": "heat_stress", "range": [28.1, 40], "interpretation": "Excess heat causes leaf scorch and increased water demand; can reduce sweetness.", "recommendation": "Increase shading/ventilation; increase irrigation frequency."}
+      ],
+      "sources": ["https://www.growbycity.com/plant/stevia/", "https://plantly.io/plant-care/how-to-grow/stevia-plants/", "https://harvesttotable.com/how-to-grow-stevia/"]
+    },
+    {
+      "parameter": "relative_humidity",
+      "unit": "percent",
+      "optimal_range": [65, 80],
+      "classifications": [
+        {"label": "optimal", "range": [65, 80], "interpretation": "Matches high-mountain native cultivation conditions (~73% RH) linked to best growth performance (R2>0.85).", "recommendation": "Maintain current humidity; no action needed."},
+        {"label": "low_dry_stress", "range": [0, 64], "interpretation": "Low humidity increases transpiration stress; can cause leggy growth or leaf curling.", "recommendation": "Activate misting/humidification if available; increase watering frequency slightly."},
+        {"label": "high_fungal_risk", "range": [81, 100], "interpretation": "Excess humidity with poor airflow raises risk of wilt and leaf spot diseases.", "recommendation": "Improve ventilation; reduce misting; inspect for fungal spotting."}
+      ],
+      "sources": ["https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12343758/", "https://www.epicgardening.com/stevia/", "https://www.growbycity.com/plant/stevia/"]
+    },
+    {
+      "parameter": "light_intensity",
+      "unit": "hours_direct_sun",
+      "optimal_range": [6, 8],
+      "classifications": [
+        {"label": "optimal", "range": [6, 8], "interpretation": "Full sun exposure supports dense, bushy growth and maximum leaf yield.", "recommendation": "Maintain current light exposure schedule."},
+        {"label": "insufficient", "range": [0, 5.9], "interpretation": "Partial shade causes spindly growth and fewer leaves (lower yield).", "recommendation": "Relocate grow lights closer or extend photoperiod via supplemental LED lighting."}
+      ],
+      "sources": ["https://www.epicgardening.com/stevia/", "https://ujamaaseeds.com/products/stevia-candyleaf", "https://plantly.io/plant-care/how-to-grow/stevia-plants/"]
+    },
+    {
+      "parameter": "soil_moisture",
+      "unit": "qualitative",
+      "optimal_range": null,
+      "classifications": [
+        {"label": "optimal", "interpretation": "Soil consistently moist but well-drained; top inch dry before rewatering.", "recommendation": "Maintain current irrigation schedule."},
+        {"label": "too_dry", "interpretation": "Top inch and subsoil fully dry; risk of drought stress and reduced yield.", "recommendation": "Trigger irrigation pump/watering alert."},
+        {"label": "waterlogged", "interpretation": "Standing water or saturated soil; high risk of root rot and wilt disease.", "recommendation": "Halt irrigation; improve drainage; inspect roots for rot."}
+      ],
+      "sources": ["https://plantly.io/plant-care/how-to-grow/stevia-plants/", "https://harvesttotable.com/how-to-grow-stevia/", "https://earthone.io/plant/stevia%20rebaudiana"]
+    }
+  ]
+}

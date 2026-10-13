@@ -1,0 +1,201 @@
+{
+  "model_name": "bert-base-uncased",
+  "epochs_completed": 30,
+  "batch_size": 25,
+  "training_method": "frozen BERT encoder with trained classification head",
+  "seed": 42,
+  "best_epoch_by_validation_loss": 30,
+  "best_validation_loss": 2.20845925366437,
+  "split_sizes": {
+    "train": 126,
+    "validation": 27,
+    "test": 27
+  },
+  "class_counts": {
+    "fertilization": 20,
+    "general": 20,
+    "growing": 20,
+    "humidity": 20,
+    "problems": 20,
+    "soil": 20,
+    "sunlight": 20,
+    "temperature": 20,
+    "watering": 20
+  },
+  "test_metrics": {
+    "loss": 2.021277825037638,
+    "accuracy": 0.14814814814814814,
+    "macro_precision": 0.1037037037037037,
+    "macro_recall": 0.14814814814814814,
+    "macro_f1": 0.11762311762311763,
+    "per_intent": {
+      "fertilization": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 3
+      },
+      "general": {
+        "precision": 0.5,
+        "recall": 0.6666666666666666,
+        "f1": 0.5714285714285715,
+        "support": 3
+      },
+      "growing": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 3
+      },
+      "humidity": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 3
+      },
+      "problems": {
+        "precision": 0.1,
+        "recall": 0.3333333333333333,
+        "f1": 0.15384615384615383,
+        "support": 3
+      },
+      "soil": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 3
+      },
+      "sunlight": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 3
+      },
+      "temperature": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 3
+      },
+      "watering": {
+        "precision": 0.3333333333333333,
+        "recall": 0.3333333333333333,
+        "f1": 0.3333333333333333,
+        "support": 3
+      }
+    },
+    "confusion_matrix": [
+      [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1
+      ],
+      [
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        1,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        2,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1
+      ]
+    ],
+    "confusion_matrix_labels": [
+      "fertilization",
+      "general",
+      "growing",
+      "humidity",
+      "problems",
+      "soil",
+      "sunlight",
+      "temperature",
+      "watering"
+    ]
+  },
+  "note": "Synthetic starter data; test metrics are not estimates of real-world performance."
+}
