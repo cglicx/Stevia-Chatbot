@@ -179,3 +179,183 @@ text,intent
 "What should I do about possible fungus on Stevia?",problems
 "Why does my Stevia look unhealthy even though I water it?",problems
 "How can I diagnose a problem with my Stevia plant?",problems
+Give me a summary of my Stevia plant status.,general
+How is my Stevia plant doing today?,general
+Is my Stevia plant healthy right now?,general
+Show me the overall condition of my plant.,general
+What is the current status of all sensors?,general
+Are there any alerts for my Stevia?,general
+When was the plant data last updated?,general
+Is the monitoring system online?,general
+Show me today's plant report.,general
+Give me a weekly summary of my Stevia.,general
+What did the sensors record in the last 24 hours?,general
+Is anything wrong with my plant right now?,general
+Which sensor readings are out of range?,general
+How many alerts were triggered today?,general
+Show the latest readings from my Stevia monitor.,general
+What is the plant's overall health score?,general
+Which parameter needs my attention first?,general
+Can you check on my Stevia?,general
+How does today's data compare to yesterday?,general
+What is my plant monitoring dashboard showing?,general
+How tall is my Stevia plant now?,growing
+How fast is my Stevia growing?,growing
+Is my Stevia growing at a normal rate?,growing
+What growth stage is my plant in?	growing
+How many days since I planted my Stevia?	growing
+When will my Stevia be ready to harvest?	growing
+How many new leaves has my Stevia grown this week?	growing
+Is my plant's growth slowing down?	growing
+What is the growth trend of my Stevia this month?	growing
+Has my Stevia grown since last week?	growing
+Does my plant need to be repotted based on its growth?	growing
+How many days until the next pruning?	growing
+Is my Stevia ready for harvesting?	growing
+How many branches does my Stevia have?	growing
+When did my Stevia start flowering?	growing
+Show me the growth history of my plant.	growing
+Is my Stevia in the vegetative stage?	growing
+What is the age of my Stevia plant?	growing
+How does my plant's growth compare to the ideal?	growing
+Is my Stevia growing too slowly?	growing
+What is the current temperature around my Stevia?	temperature
+Show me the temperature reading right now.	temperature
+What was the highest temperature today?	temperature
+What was the lowest temperature last night?	temperature
+Is the temperature within the safe range for my Stevia?	temperature
+Has the temperature changed in the past hour?	temperature
+Send me an alert if the temperature goes above 35 degrees.	temperature
+Show the temperature history for this week.	temperature
+What is the average temperature today?	temperature
+Is the temperature sensor working properly?	temperature
+Why is the temperature reading so high?	temperature
+Is the current temperature too cold for my plant?	temperature
+Did the temperature drop overnight?	temperature
+How many times did the temperature exceed the limit today?	temperature
+What temperature did the sensor record this morning?	temperature
+Is the plant's environment too hot right now?	temperature
+Show a temperature graph for the last 24 hours.	temperature
+What is the temperature trend today?	temperature
+Is the temperature stable in my plant area?	temperature
+Alert me when the temperature becomes unsafe.	temperature
+What is the current soil moisture level?	watering
+Is my Stevia's soil dry right now?	watering
+Does my plant need watering now?	watering
+When was my Stevia last watered?	watering
+When is the next scheduled watering?	watering
+Is the water pump working?	watering
+Show the soil moisture history for today.	watering
+How much water was given today?	watering
+Is the soil moisture below the threshold?	watering
+Turn on the irrigation for my Stevia.	watering
+Did the automatic watering run this morning?	watering
+How many times was my plant watered this week?	watering
+Is the soil too wet at the moment?	watering
+What is the soil moisture percentage right now?	watering
+Notify me when the soil gets too dry.	watering
+Is the soil moisture sensor reading correctly?	watering
+How long did the last watering run?	watering
+Is the water tank low?	watering
+Should I water my Stevia based on the sensor reading?	watering
+Show me the soil moisture trend this week.	watering
+What is the current soil pH reading?	soil
+Is the soil pH in the ideal range?	soil
+Show me the soil pH history.	soil
+What is the soil temperature right now?	soil
+What is the soil electrical conductivity reading?	soil
+Is the soil nutrient level low?	soil
+How is the soil condition of my Stevia?	soil
+Is my soil too acidic according to the sensor?	soil
+Is the soil too alkaline based on the reading?	soil
+Did the soil pH change this week?	soil
+Is the soil pH sensor calibrated?	soil
+What is the nitrogen level in my soil?	soil
+Is the soil salinity too high?	soil
+Show me the soil quality report.	soil
+Why is the soil pH reading unstable?	soil
+Is the soil healthy enough for my Stevia?	soil
+How often does the soil sensor take readings?	soil
+Is the soil sensor placed correctly?	soil
+What are the soil readings right now?	soil
+Alert me if the soil pH goes out of range.	soil
+What is the current light intensity?	sunlight
+How many lux is my Stevia receiving?	sunlight
+How many hours of sunlight did my plant get today?	sunlight
+Is my plant getting enough light right now?	sunlight
+Is the grow light turned on?	sunlight
+Turn on the grow light for my Stevia.	sunlight
+What is the light level at the plant right now?	sunlight
+Show the sunlight exposure history for this week.	sunlight
+Is the light sensor working?	sunlight
+Is the light too bright for my plant?	sunlight
+When did the light turn on this morning?	sunlight
+How long was the grow light on today?	sunlight
+Is my Stevia getting too little light today?	sunlight
+What is the UV index near my plant?	sunlight
+Notify me when the light is too low.	sunlight
+Did my plant get direct sunlight this afternoon?	sunlight
+Show a light intensity graph for today.	sunlight
+Is the grow light schedule set correctly?	sunlight
+What was the peak light level today?	sunlight
+Is it too dark around my Stevia?	sunlight
+What is the current humidity level?	humidity
+Is the air humidity safe for my Stevia?	humidity
+Show me the humidity reading right now.	humidity
+What was the highest humidity today?	humidity
+What was the lowest humidity today?	humidity
+Is the humidity too low in the plant area?	humidity
+Is the humidity sensor working properly?	humidity
+Did the humidity change in the last hour?	humidity
+Show the humidity history for this week.	humidity
+What is the average humidity today?	humidity
+Is the room too humid for my plant?	humidity
+Alert me when humidity goes above 80 percent.	humidity
+Why is the humidity reading so high?	humidity
+Is the humidity stable around my Stevia?	humidity
+Show a humidity graph for the last 24 hours.	humidity
+Is the humidifier turned on?	humidity
+Is the humidity within the ideal range?	humidity
+How does today's humidity compare to yesterday?	humidity
+Is the air too dry right now?	humidity
+Has the humidity dropped overnight?	humidity
+When was my Stevia last fertilized?	fertilization
+When is the next fertilizer schedule?	fertilization
+Does my plant need fertilizer right now?	fertilization
+Is the nutrient level low based on the sensor?	fertilization
+How much fertilizer was applied this month?	fertilization
+Remind me when to fertilize my Stevia.	fertilization
+Show the fertilizer history of my plant.	fertilization
+Is the nutrient pump working?	fertilization
+Did the automatic fertilizing run today?	fertilization
+Is the fertilizer tank empty?	fertilization
+Is my Stevia getting enough nutrients?	fertilization
+What is the nutrient concentration right now?	fertilization
+Is it safe to fertilize my plant today?	fertilization
+How many days since the last feeding?	fertilization
+Is the nutrient solution level low?	fertilization
+Set a reminder for my next fertilizing.	fertilization
+Did I fertilize my Stevia this week?	fertilization
+Is the plant showing nutrient deficiency in the sensor data?	fertilization
+What is the NPK level in the soil right now?	fertilization
+Should I add fertilizer based on the current readings?	fertilization
+Are there any problems detected on my Stevia?	problems
+Why did I receive an alert?	problems
+Is my plant at risk right now?	problems
+Which sensor triggered the warning?	problems
+Is my Stevia showing signs of stress in the data?	problems
+Why is my plant status critical?	problems
+What caused the alert this morning?	problems
+Is my Stevia in danger of dying?	problems
+What should I do about this warning?	problems
+Why are the sensor readings abnormal?	problems
+Is there a sensor malfunction?	problems
+Why is the sensor offline?	problems
+Why is no data coming from my monitor?	problems
+Is the device still connected to WiFi?	problems
+Why are the readings not updating?	problems
+How do I fix the sensor error?	problems
+Was there any abnormal reading today?	problems
+Is the plant's condition getting worse?	problems
+Which readings are causing the warning?	problems
+Has my plant recovered from the earlier alert?	problems
