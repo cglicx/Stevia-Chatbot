@@ -132,7 +132,7 @@ KNOWLEDGE_BASE = {
             "Stevia does well around moderate household humidity. Keep air moving and avoid wetting the leaves repeatedly, since stagnant dampness encourages fungal problems.",
             "Humidity target: SPROUT classifies 65-80% relative humidity as optimal. Below that, watch for curling; above 80%, prioritize ventilation and reduce misting.",
             "Do not solve dry air by keeping foliage constantly wet. A small humidifier, spacing between plants, and gentle airflow are safer than frequent leaf misting.",
-        ],
+         ],
     },
     "fertilization": {
         "title": "Fertilization",

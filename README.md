@@ -27,6 +27,16 @@ A simple local Flask chatbot that answers common Stevia plant-care questions fro
 
 The trained classifier and tokenizer are included in `models/stevia-intent-bert`, so startup does not require a model download. The app still answers using the keyword and knowledge-base fallback if the local model is unavailable.
 
+## Retraining and evaluation
+
+Retrain the intent model with:
+
+```powershell
+python train_intent_classifier.py --data intent_training_data.csv --output-dir models/stevia-intent-bert --epochs 8 --batch-size 8 --learning-rate 2e-5 --patience 2 --seed 42
+```
+
+Training fine-tunes the complete BERT model, uses a stratified 70/15/15 train/validation/test split, groups highly similar same-intent phrases to reduce split leakage, and stops when validation loss does not improve. The validation set is used for confidence calibration and for choosing when a confident model prediction should override keyword routing. The report includes both classifier-only metrics and end-to-end intent-routing metrics. Do not treat metrics on synthetic training phrases as production accuracy: evaluate on independently collected, consented user utterances and multi-turn conversations before deployment.
+
 ## FastAPI mobile API
 
 The FastAPI API can run alongside the Flask web interface. Install the requirements, then start it with:
@@ -57,7 +67,7 @@ The `sensor_readings/` folder contains Excel files for individual sensor paramet
 - `Water TDS.xlsx` - water quality (total dissolved solids)
 - `Solar Panel Battery Voltage.xlsx` - power system status
 
-The chatbot loads the latest values and measurement units from these Excel files automatically at startup. If the folder is not available, it falls back to `IoTProcessed_Data.csv`. For Stevia care questions, deterministic rules compare compatible sensor values with the SPROUT target ranges and recommendations; they do not use an additional recommendation model. Light is recorded in lux while SPROUT's light target is daily sun-hours, so the chatbot reports that mismatch instead of comparing unlike units. Soil moisture is reported as a percentage, but SPROUT provides qualitative wet/dry guidance without calibrated numeric thresholds; the chatbot therefore bases watering advice on checking the top inch rather than inventing a percentage cutoff. Questions such as "What are the latest sensor readings?" use the most recent snapshot. Manual `sensor_data` values sent to the API override matching dataset values, which keeps live IoT integration straightforward.
+The chatbot loads the latest values and measurement units from these Excel files automatically at startup. If the folder is not available, it falls back to `IoTProcessed_Data.csv`. For Stevia care questions, deterministic rules compare compatible sensor values with the SPROUT target ranges and recommendations; they do not use an additional recommendation model. Light is recorded in lux while SPROUT's light target is daily sun-hours, so the chatbot reports that mismatch instead of comparing unlike units. Soil moisture is reported as a percentage, but SPROUT provides qualitative wet/dry guidance without calibrated numeric thresholds; the chatbot therefore bases watering advice on checking the top inch rather than inventing a percentage cutoff. Questions such as "What are the latest sensor readings?" use the most recent snapshot. For historical sensor-record requests, the chatbot first asks whether to retrieve a specific number of records or the entire set; reply with a positive number or "all" to confirm. Records are then listed newest first. Manual `sensor_data` values sent to the API override matching dataset values, which keeps live IoT integration straightforward.
 
 `POST /api/chat` accepts an optional `sensor_data` object in addition to `message`:
 

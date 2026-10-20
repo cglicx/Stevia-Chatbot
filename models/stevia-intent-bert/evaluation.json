@@ -1,175 +1,170 @@
 {
   "model_name": "bert-base-uncased",
-  "epochs_completed": 50,
-  "batch_size": 32,
-  "training_method": "frozen BERT encoder with trained classification head",
+  "epochs_completed": 8,
+  "batch_size": 8,
+  "learning_rate": 2e-05,
+  "early_stopping_patience": 2,
+  "training_method": "full BERT fine-tuning with validation-loss early stopping",
   "seed": 42,
-  "best_epoch_by_validation_loss": 50,
-  "best_validation_loss": 2.155470848083496,
+  "best_epoch_by_validation_loss": 8,
+  "best_validation_loss": 0.11796769499778748,
+  "confidence_temperature": 0.7390339970588684,
+  "split_method": "stratified by intent and grouped by same-intent text similarity (threshold 0.82)",
   "split_sizes": {
-    "train": 126,
-    "validation": 27,
-    "test": 27
+    "train": 268,
+    "validation": 58,
+    "test": 58
   },
   "class_counts": {
-    "fertilization": 20,
-    "general": 20,
-    "growing": 20,
-    "humidity": 20,
-    "problems": 20,
-    "soil": 20,
-    "sunlight": 20,
-    "temperature": 20,
-    "watering": 20
+    "fertilization": 40,
+    "general": 40,
+    "growing": 40,
+    "humidity": 40,
+    "problems": 40,
+    "sensor_records": 24,
+    "soil": 40,
+    "sunlight": 40,
+    "temperature": 40,
+    "watering": 40
   },
   "test_metrics": {
-    "loss": 1.9372694492340088,
-    "accuracy": 0.2222222222222222,
-    "macro_precision": 0.125,
-    "macro_recall": 0.2222222222222222,
-    "macro_f1": 0.15600448933782265,
+    "loss": 0.4316396713256836,
+    "accuracy": 0.896551724137931,
+    "macro_precision": 0.8957142857142857,
+    "macro_recall": 0.9,
+    "macro_f1": 0.8925674325674325,
     "per_intent": {
       "fertilization": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
-        "support": 3
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
       },
       "general": {
-        "precision": 0.5,
-        "recall": 1.0,
-        "f1": 0.6666666666666666,
-        "support": 3
+        "precision": 0.75,
+        "recall": 0.5,
+        "f1": 0.6,
+        "support": 6
       },
       "growing": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
-        "support": 3
+        "precision": 0.75,
+        "recall": 1.0,
+        "f1": 0.8571428571428571,
+        "support": 6
       },
       "humidity": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
-        "support": 3
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
       },
       "problems": {
-        "precision": 0.125,
-        "recall": 0.3333333333333333,
-        "f1": 0.18181818181818182,
-        "support": 3
+        "precision": 0.6,
+        "recall": 0.5,
+        "f1": 0.5454545454545454,
+        "support": 6
+      },
+      "sensor_records": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4
       },
       "soil": {
-        "precision": 0.3333333333333333,
-        "recall": 0.3333333333333333,
-        "f1": 0.3333333333333333,
-        "support": 3
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
       },
       "sunlight": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
-        "support": 3
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
       },
       "temperature": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
-        "support": 3
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
       },
       "watering": {
-        "precision": 0.16666666666666666,
-        "recall": 0.3333333333333333,
-        "f1": 0.2222222222222222,
-        "support": 3
+        "precision": 0.8571428571428571,
+        "recall": 1.0,
+        "f1": 0.923076923076923,
+        "support": 6
       }
     },
     "confusion_matrix": [
       [
+        6,
         0,
         0,
         0,
         0,
-        1,
-        1,
         0,
         0,
-        1
+        0,
+        0,
+        0
       ],
       [
+        0,
+        3,
+        1,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        1,
         0,
         3,
         0,
         0,
         0,
         0,
-        0,
-        0,
-        0
-      ],
-      [
-        0,
-        1,
-        0,
-        0,
-        2,
-        0,
-        0,
-        0,
-        0
-      ],
-      [
-        0,
-        0,
-        0,
-        0,
-        1,
-        1,
-        0,
-        0,
-        1
-      ],
-      [
-        0,
-        2,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        0
-      ],
-      [
-        0,
-        0,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        2
-      ],
-      [
-        0,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
         1
       ],
       [
         0,
         0,
-        1,
         0,
-        1,
         0,
-        1,
+        0,
+        4,
+        0,
+        0,
         0,
         0
       ],
@@ -178,11 +173,48 @@
         0,
         0,
         0,
-        1,
         0,
-        1,
         0,
-        1
+        6,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6
       ]
     ],
     "confusion_matrix_labels": [
@@ -191,11 +223,217 @@
       "growing",
       "humidity",
       "problems",
+      "sensor_records",
+      "soil",
+      "sunlight",
+      "temperature",
+      "watering"
+    ],
+    "uncalibrated_accuracy": 0.896551724137931
+  },
+  "chatbot_routing_test_metrics": {
+    "loss": 1.0035103559494019,
+    "accuracy": 0.896551724137931,
+    "macro_precision": 0.8957142857142857,
+    "macro_recall": 0.9,
+    "macro_f1": 0.8905472305472305,
+    "per_intent": {
+      "fertilization": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
+      },
+      "general": {
+        "precision": 0.8,
+        "recall": 0.6666666666666666,
+        "f1": 0.7272727272727272,
+        "support": 6
+      },
+      "growing": {
+        "precision": 0.75,
+        "recall": 1.0,
+        "f1": 0.8571428571428571,
+        "support": 6
+      },
+      "humidity": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
+      },
+      "problems": {
+        "precision": 0.75,
+        "recall": 0.5,
+        "f1": 0.6,
+        "support": 6
+      },
+      "sensor_records": {
+        "precision": 0.8,
+        "recall": 1.0,
+        "f1": 0.888888888888889,
+        "support": 4
+      },
+      "soil": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
+      },
+      "sunlight": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
+      },
+      "temperature": {
+        "precision": 1.0,
+        "recall": 0.8333333333333334,
+        "f1": 0.9090909090909091,
+        "support": 6
+      },
+      "watering": {
+        "precision": 0.8571428571428571,
+        "recall": 1.0,
+        "f1": 0.923076923076923,
+        "support": 6
+      }
+    },
+    "confusion_matrix": [
+      [
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        4,
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        1,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        5,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6
+      ]
+    ],
+    "confusion_matrix_labels": [
+      "fertilization",
+      "general",
+      "growing",
+      "humidity",
+      "problems",
+      "sensor_records",
       "soil",
       "sunlight",
       "temperature",
       "watering"
     ]
   },
-  "note": "Synthetic starter data; test metrics are not estimates of real-world performance."
+  "note": "Training phrases are synthetic. Held-out test scores are not estimates of real-world performance; validate against independently collected user conversations before deployment.",
+  "intent_confidence_threshold": 0.86
 }

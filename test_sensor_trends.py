@@ -70,6 +70,83 @@ class SensorTrendTests(unittest.TestCase):
         self.assertEqual(reading["sensor_trends"]["temperature"], "rising")
         self.assertEqual(reading["sensor_trends"]["water_level"], "falling")
 
+    def test_excel_history_combines_sensor_values_by_timestamp(self):
+        class FakeFile:
+            def __init__(self, name, exists):
+                self.name = name
+                self._exists = exists
+
+            def exists(self):
+                return self._exists
+
+        class FakeFolder:
+            def exists(self):
+                return True
+
+            def __truediv__(self, name):
+                return FakeFile(name, name in {
+                    "Environment Temperature.xlsx",
+                    "Environment Humidity.xlsx",
+                })
+
+        class FakeDatasetPath:
+            name = "IoTProcessed_Data.csv"
+
+            def exists(self):
+                return False
+
+        frames = {
+            "Environment Temperature.xlsx": pd.DataFrame({
+                "timestamp": ["2024-09-27 13:28:13 +0530", "2024-09-27 13:28:26 +0530"],
+                "value": [26.6, 26.7],
+            }),
+            "Environment Humidity.xlsx": pd.DataFrame({
+                "timestamp": ["2024-09-27 13:28:13 +0530"],
+                "value": [95.0],
+            }),
+        }
+
+        def read_excel(path, header, usecols):
+            self.assertEqual(header, 1)
+            self.assertEqual(usecols, [0, 2])
+            return frames[path.name]
+
+        with patch.object(iot_data, "SENSOR_READINGS_PATH", FakeFolder()), \
+             patch.object(iot_data, "DATASET_PATH", FakeDatasetPath()), \
+             patch.object(iot_data.pd, "read_excel", side_effect=read_excel):
+            records = iot_data.load_sensor_records()
+
+        self.assertEqual(len(records), 2)
+        self.assertEqual(records[0]["recorded_at"], "2024-09-27 13:28:26")
+        self.assertEqual(records[0]["temperature"], 26.7)
+        self.assertEqual(records[1]["temperature"], 26.6)
+        self.assertEqual(records[1]["humidity"], 95.0)
+
+    def test_csv_history_fallback_returns_all_timestamped_rows(self):
+        class FakePath:
+            def __init__(self, exists):
+                self._exists = exists
+
+            def exists(self):
+                return self._exists
+
+        frame = pd.DataFrame({
+            "date": ["2024-09-27 13:27:26", "2024-09-27 13:28:26"],
+            "tempreature": [26.5, 26.7],
+            "humidity": [94, 95],
+            "water_level": [63, 64],
+            "Fan_actuator_ON": [0, 1],
+        })
+        with patch.object(iot_data, "SENSOR_READINGS_PATH", FakePath(False)), \
+             patch.object(iot_data, "DATASET_PATH", FakePath(True)), \
+             patch.object(iot_data.pd, "read_csv", return_value=frame):
+            records = iot_data.load_sensor_records()
+
+        self.assertEqual(len(records), 2)
+        self.assertEqual(records[0]["recorded_at"], "2024-09-27 13:28:26")
+        self.assertEqual(records[0]["temperature"], 26.7)
+        self.assertTrue(records[0]["fan_on"])
+
 
 if __name__ == "__main__":
     unittest.main()

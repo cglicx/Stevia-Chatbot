@@ -1,10 +1,13 @@
+import logging
 import os
 import re
 from pathlib import Path
 from typing import Any
 
-from .iot_data import LATEST_READING
-from .knowledge_base import KNOWLEDGE_BASE, KNOWLEDGE_SOURCE, SPROUT_KNOWLEDGE, WELCOME_MESSAGE
+from .iot_data import LATEST_READING, load_sensor_records
+from .knowledge_base import KNOWLEDGE_BASE, KNOWLEDGE_SOURCE, SPROUT_KNOWLEDGE
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class SteviaChatbot:
@@ -12,6 +15,10 @@ class SteviaChatbot:
 
     MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "stevia-intent-bert"
     OUT_OF_SCOPE_RESPONSE = "Sorry, your question is outside my scope. I can only answer questions related to stevia."
+    SENSOR_RECORDS_CONFIRMATION = (
+        "Before I retrieve the sensor records, would you like a specific number of records "
+        "or the entire set? Reply with a number (for example, 10) or “all”."
+    )
 
     def __init__(self):
         self.tokenizer = None
@@ -19,7 +26,6 @@ class SteviaChatbot:
         self.model_error = None
         self._model_loaded = False
         self.llm_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-        self.llm_enabled = bool(os.getenv("OPENAI_API_KEY"))
 
     def _load_model(self):
         if self._model_loaded:
@@ -33,6 +39,7 @@ class SteviaChatbot:
             self.model.eval()
         except Exception as error:
             self.model_error = str(error)
+            _LOGGER.warning("Unable to load the intent classifier", exc_info=True)
 
     def _ensure_model(self):
         if not self._model_loaded:
@@ -47,7 +54,8 @@ class SteviaChatbot:
 
         with torch.no_grad():
             inputs = self.tokenizer(question, truncation=True, max_length=64, return_tensors="pt")
-            probabilities = torch.softmax(self.model(**inputs).logits[0], dim=-1)
+            temperature = max(float(getattr(self.model.config, "confidence_temperature", 1.0)), 1e-6)
+            probabilities = torch.softmax(self.model(**inputs).logits[0] / temperature, dim=-1)
 
         return {
             label: float(probabilities[index])
@@ -56,15 +64,23 @@ class SteviaChatbot:
 
     def _keyword_scores(self, question: str) -> dict[str, float]:
         words = set(re.findall(r"[a-z]+", question.lower()))
+        negated_words = self._negated_words(question)
         scores = {}
         for intent, item in KNOWLEDGE_BASE.items():
-            matches = words.intersection(item["keywords"])
+            matches = words.intersection(item["keywords"]) - negated_words
             # Count matching evidence directly. Normalizing by list length made
             # the generic Stevia topic beat specific topics such as watering.
             scores[intent] = float(len(matches))
             if intent == "general" and matches == {"stevia"}:
                 scores[intent] = 0.0
         return scores
+
+    @staticmethod
+    def _negated_words(question: str) -> set[str]:
+        return set(re.findall(
+            r"\b(?:not|instead of|rather than)\s+(?:about\s+)?([a-z]+)\b",
+            question.lower(),
+        ))
 
     def _select_intent(self, question: str, history: list[dict[str, Any]] | None = None) -> tuple[str, str]:
         recent_question = ""
@@ -87,6 +103,24 @@ class SteviaChatbot:
 
         keyword_scores = self._keyword_scores(context_question)
         model_scores = self._model_scores(context_question)
+
+        if model_scores and self.model is not None:
+            model_intent = max(model_scores, key=model_scores.get)
+            confidence_threshold = float(
+                getattr(self.model.config, "intent_confidence_threshold", 1.0)
+            )
+            intent_keywords = {
+                word
+                for keyword in KNOWLEDGE_BASE.get(model_intent, {}).get("keywords", [])
+                for word in keyword.lower().split()
+            }
+            negated_intent = bool(intent_keywords.intersection(self._negated_words(context_question)))
+            if (
+                model_intent in KNOWLEDGE_BASE
+                and not negated_intent
+                and model_scores[model_intent] >= confidence_threshold
+            ):
+                return model_intent, "fine-tuned classifier"
 
         # A specific care word such as "water" should beat the generic
         # "plant" match in questions like "Should I water the plant?".
@@ -149,6 +183,7 @@ class SteviaChatbot:
             from openai import OpenAI
         except Exception as error:
             self.model_error = str(error)
+            _LOGGER.warning("OpenAI support is unavailable", exc_info=True)
             return None
 
         try:
@@ -170,6 +205,7 @@ class SteviaChatbot:
             return content.strip() if content else None
         except Exception as error:
             self.model_error = str(error)
+            _LOGGER.warning("OpenAI response generation failed", exc_info=True)
             return None
 
     def answer(
@@ -185,74 +221,112 @@ class SteviaChatbot:
             social_reply = "Hi! Ask me about your Stevia plant care, watering, light, soil, or temperature."
             if any(word in question.lower() for word in ["thank", "thanks", "welcome"]):
                 social_reply = "You’re welcome! Ask me anything about your Stevia care."
-            return {
-                "answer": social_reply,
-                "topic": "About Stevia",
-                "intent": "general",
-                "source": "social",
-                "model_loaded": self.model is not None,
-                "sensor_data": combined_sensor_data,
-                "knowledge_source": KNOWLEDGE_SOURCE if SPROUT_KNOWLEDGE else "built-in fallback",
-            }
+            return self._response(
+                social_reply, "About Stevia", "general", "social", combined_sensor_data
+            )
+
+        if self._is_awaiting_sensor_records_selection(history):
+            selection = self._sensor_records_selection(question)
+            if selection is None:
+                return self._response(
+                    self.SENSOR_RECORDS_CONFIRMATION,
+                    "Historical sensor records",
+                    "sensor_records",
+                    "sensor-record confirmation",
+                    combined_sensor_data,
+                )
+
+            records = load_sensor_records()
+            if selection == "all":
+                answer = self._sensor_records_summary(records)
+            else:
+                answer = self._sensor_records_summary(records[:selection])
+                if len(records) < selection and records:
+                    answer += f"\nOnly {len(records)} records are available."
+            return self._response(
+                answer,
+                "Historical sensor records",
+                "sensor_records",
+                "sensor-data",
+                combined_sensor_data,
+                sensor_records=records if selection == "all" else records[:selection],
+            )
 
         if not self._is_in_scope(question, history):
-            return {
-                "answer": self.OUT_OF_SCOPE_RESPONSE,
-                "topic": "Outside scope",
-                "intent": "out_of_scope",
-                "source": "scope validation",
-                "model_loaded": self.model is not None,
-                "sensor_data": combined_sensor_data,
-                "knowledge_source": KNOWLEDGE_SOURCE if SPROUT_KNOWLEDGE else "built-in fallback",
-            }
+            return self._response(
+                self.OUT_OF_SCOPE_RESPONSE,
+                "Outside scope",
+                "out_of_scope",
+                "scope validation",
+                combined_sensor_data,
+            )
+
+        if self._asks_for_sensor_records(question):
+            return self._response(
+                self.SENSOR_RECORDS_CONFIRMATION,
+                "Historical sensor records",
+                "sensor_records",
+                "sensor-record confirmation",
+                combined_sensor_data,
+            )
 
         if self._asks_for_current_readings(question):
-            return {
-                "answer": self._current_reading_summary(combined_sensor_data, history),
-                "topic": "Current sensor readings",
-                "intent": "sensor",
-                "source": "sensor-data",
-                "model_loaded": self.model is not None,
-                "sensor_data": combined_sensor_data,
-                "knowledge_source": KNOWLEDGE_SOURCE if SPROUT_KNOWLEDGE else "built-in fallback",
-            }
+            return self._response(
+                self._current_reading_summary(combined_sensor_data, history),
+                "Current sensor readings",
+                "sensor",
+                "sensor-data",
+                combined_sensor_data,
+            )
 
         intent, source = self._select_intent(question, history=history)
         sensor_note = self._sensor_note(combined_sensor_data, intent)
         if sensor_note:
-            return {
-                "answer": sensor_note,
-                "topic": KNOWLEDGE_BASE[intent]["title"],
-                "intent": intent,
-                "source": "rule-based SPROUT sensor comparison",
-                "model_loaded": self.model is not None,
-                "sensor_data": combined_sensor_data,
-                "knowledge_source": KNOWLEDGE_SOURCE if SPROUT_KNOWLEDGE else "built-in fallback",
-            }
+            return self._response(
+                sensor_note,
+                KNOWLEDGE_BASE[intent]["title"],
+                intent,
+                "rule-based SPROUT sensor comparison",
+                combined_sensor_data,
+            )
 
         llm_response = self._llm_answer(question, history, combined_sensor_data)
         if llm_response:
-            return {
-                "answer": llm_response,
-                "topic": KNOWLEDGE_BASE[intent]["title"],
-                "intent": intent,
-                "source": "llm (OpenAI)",
-                "model_loaded": self.model is not None,
-                "sensor_data": combined_sensor_data,
-                "knowledge_source": KNOWLEDGE_SOURCE if SPROUT_KNOWLEDGE else "built-in fallback",
-            }
+            return self._response(
+                llm_response,
+                KNOWLEDGE_BASE[intent]["title"],
+                intent,
+                "llm (OpenAI)",
+                combined_sensor_data,
+            )
 
         response = self._choose_response(intent, question, history)
 
-        return {
-            "answer": response,
-            "topic": KNOWLEDGE_BASE[intent]["title"],
+        return self._response(
+            response, KNOWLEDGE_BASE[intent]["title"], intent, source, combined_sensor_data
+        )
+
+    def _response(
+        self,
+        answer: str,
+        topic: str,
+        intent: str,
+        source: str,
+        sensor_data: dict[str, Any],
+        sensor_records: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        response = {
+            "answer": answer,
+            "topic": topic,
             "intent": intent,
             "source": source,
             "model_loaded": self.model is not None,
-            "sensor_data": combined_sensor_data,
+            "sensor_data": sensor_data,
             "knowledge_source": KNOWLEDGE_SOURCE if SPROUT_KNOWLEDGE else "built-in fallback",
         }
+        if sensor_records is not None:
+            response["sensor_records"] = sensor_records
+        return response
 
     @staticmethod
     def _is_social_only(question: str) -> bool:
@@ -279,6 +353,8 @@ class SteviaChatbot:
             return True
         if self._asks_for_current_readings(question):
             return True
+        if self._asks_for_sensor_records(question):
+            return True
         if any(score > 0 for score in self._keyword_scores(question).values()):
             return True
 
@@ -302,6 +378,41 @@ class SteviaChatbot:
     def _asks_for_current_readings(question: str) -> bool:
         words = set(re.findall(r"[a-z]+", question.lower()))
         return bool(words.intersection({"sensor", "sensors", "reading", "readings", "measurement", "measurements", "snapshot"}))
+
+    @staticmethod
+    def _asks_for_sensor_records(question: str) -> bool:
+        words = set(re.findall(r"[a-z]+", question.lower()))
+        record_terms = {"record", "records", "recorded", "log", "logs"}
+        history_terms = {"history", "historical", "past", "previous"}
+        sensor_terms = {"sensor", "sensors", "reading", "readings", "measurement", "measurements", "data"}
+        return bool(words.intersection(record_terms)) or (
+            bool(words.intersection(history_terms))
+            and bool(words.intersection(sensor_terms))
+        )
+
+    @classmethod
+    def _is_awaiting_sensor_records_selection(
+        cls,
+        history: list[dict[str, Any]] | None,
+    ) -> bool:
+        if not isinstance(history, list):
+            return False
+        for entry in reversed(history):
+            if isinstance(entry, dict) and entry.get("role") == "assistant":
+                return entry.get("content") == cls.SENSOR_RECORDS_CONFIRMATION
+        return False
+
+    @staticmethod
+    def _sensor_records_selection(question: str) -> int | str | None:
+        normalized = question.lower()
+        if re.search(r"\b(?:all|entire|whole|complete|full)\b", normalized):
+            return "all"
+
+        match = re.search(r"\b(\d+)\b", normalized)
+        if match:
+            count = int(match.group(1))
+            return count if count > 0 else None
+        return None
 
     @staticmethod
     def _normalize_response(text: str | None) -> str:
@@ -371,6 +482,46 @@ class SteviaChatbot:
             if not SteviaChatbot._is_duplicate_response(summary, previous_answers):
                 return summary
         return summaries[0]
+
+    @staticmethod
+    def _sensor_records_summary(records: list[dict[str, Any]]) -> str:
+        if not records:
+            return "No historical Stevia sensor records are available."
+
+        labels_and_units = {
+            "temperature": ("temperature", "C"),
+            "humidity": ("humidity", "%"),
+            "water_level": ("soil moisture", "%"),
+            "soil_ph": ("soil pH", "pH"),
+            "soil_temperature": ("soil temperature", "C"),
+            "light_intensity": ("light intensity", "lux"),
+            "water_tds": ("water TDS", "ppm"),
+            "battery_voltage": ("battery voltage", "V"),
+            "nitrogen": ("nitrogen", ""),
+            "phosphorus": ("phosphorus", ""),
+            "potassium": ("potassium", ""),
+            "fan_on": ("fan", ""),
+            "watering_pump_on": ("watering pump", ""),
+            "water_pump_on": ("water pump", ""),
+        }
+        record_label = "record" if len(records) == 1 else "records"
+        lines = [
+            f"Historical Stevia sensor records ({len(records)} timestamped {record_label}, newest first):"
+        ]
+        for record in records:
+            values = []
+            for key, (label, unit) in labels_and_units.items():
+                if key not in record:
+                    continue
+                value = record[key]
+                if key.endswith("_on"):
+                    value = "on" if value else "off"
+                    values.append(f"{label} {value}")
+                else:
+                    values.append(f"{label} {value} {unit}".rstrip())
+            if values:
+                lines.append(f"{record.get('recorded_at', 'unknown time')}: {', '.join(values)}")
+        return "\n".join(lines)
 
     @staticmethod
     def _choose_response(

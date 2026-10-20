@@ -18,7 +18,9 @@ def index():
 
 @app.post("/api/chat")
 def chat():
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        payload = {}
     question = str(payload.get("message", "")).strip()
     sensor_data = payload.get("sensor_data")
     history = payload.get("history")
