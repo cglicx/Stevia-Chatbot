@@ -382,6 +382,7 @@ Has my plant recovered from the earlier alert?,problems
 "Can you provide the records of my Stevia?",sensor_records
 "I'd like to see all historical readings for my Stevia plant.",sensor_records
 "Retrieve my plant's sensor log and recorded measurements.",sensor_records
+<<<<<<< HEAD
 "What readings have been recorded over time for my Stevia?",sensor_records
 "Ano ba ang Stevia, plant ba siya?",general
 "Ano yung Stevia, natural sweetener ba siya?",general
@@ -1199,3 +1200,6 @@ Has my plant recovered from the earlier alert?,problems
 "List yung recorded conditions ng Stevia.",sensor_records
 "Paki-display yung historical plant readings.",sensor_records
 "Gusto ko makita sensor history from earlier.",sensor_records
+=======
+"What readings have been recorded over time for my Stevia?",sensor_records
+>>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
