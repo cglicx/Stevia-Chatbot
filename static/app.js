@@ -106,9 +106,7 @@ async function ask(question) {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Unable to answer right now.');
-    pending.querySelector('p').textContent = Array.isArray(data.sensor_records)
-      ? 'Here are your sensor records:'
-      : data.answer;
+    pending.querySelector('p').textContent = data.answer;
     addSensorRecordsTable(pending.querySelector('.bubble'), data.sensor_records);
     pending.querySelector('small').textContent = `${data.topic} · ${data.source}`;
     conversation.push({ role: 'assistant', content: data.answer });

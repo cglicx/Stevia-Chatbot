@@ -25,9 +25,10 @@ h1 { font-size: clamp(42px, 5vw, 68px); } h1 em { color: #d5e8c9; font-weight: 6
 @keyframes rise { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 700px) { .app-shell { display: block; min-height: 100vh; height: auto; }.sidebar { min-height: 255px; padding: 28px 28px 30px; }.sidebar .eyebrow { margin-top: 18px; }.sidebar h1 { font-size: 44px; }.intro { margin: 13px 0 0; }.status, .sidebar-footer { display: none; }.chat-panel { min-height: calc(100vh - 255px); }.chat-header { padding: 29px 24px 20px; }.messages { padding: 28px 24px 15px; }.suggestions { padding: 0 24px 14px; }.composer { margin: 0 24px; }.disclaimer { margin: 10px 24px 18px; } }
 .bubble p { white-space: pre-line; }
-.sensor-records-table-wrap { max-width: min(75vw, 760px); margin-top: 12px; overflow-x: auto; }
-.sensor-records-table { width: 100%; border-collapse: collapse; background: white; font-size: 12px; white-space: nowrap; }
+.sensor-records-table-wrap { width: 100%; max-width: 100%; min-width: 0; margin-top: 12px; overflow-x: auto; }
+.message, .bubble { min-width: 0; }
+.sensor-records-table { width: max-content; min-width: 100%; border-collapse: collapse; background: white; font-size: 12px; white-space: nowrap; }
 .sensor-records-table caption { padding: 8px; color: var(--muted); text-align: left; font-weight: 700; }
 .sensor-records-table th, .sensor-records-table td { padding: 8px 10px; border: 1px solid var(--line); text-align: left; }
 .sensor-records-table th { background: var(--mint); color: var(--ink); }
-@media (max-width: 700px) { .sensor-records-table-wrap { max-width: 72vw; } }
+@media (max-width: 700px) { .sensor-records-table-wrap { max-width: 100%; } }

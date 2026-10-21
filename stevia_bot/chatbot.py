@@ -8,16 +8,43 @@ from .iot_data import LATEST_READING, load_sensor_records
 from .knowledge_base import KNOWLEDGE_BASE, KNOWLEDGE_SOURCE, SPROUT_KNOWLEDGE
 
 _LOGGER = logging.getLogger(__name__)
+_TYPOGRAPHY_KEYWORDS = {
+    word.lower()
+    for item in KNOWLEDGE_BASE.values()
+    for keyword in item["keywords"]
+    for word in keyword.split()
+}
+_TYPOGRAPHY_KEYWORDS.update({
+    "sensor", "sensors", "reading", "readings", "measurement", "measurements",
+    "snapshot", "record", "records", "recorded", "log", "logs", "history",
+    "historical", "past", "previous",
+    "give", "latest", "newest", "recent", "last", "send", "show", "get",
+    "tell", "provide", "fetch", "retrieve", "next", "all", "entire",
+})
+_TYPOGRAPHY_ALIASES = {
+    "stvia": "stevia",
+}
+_TYPOGRAPHY_TWO_EDIT_WORDS = {
+    keyword for keyword in _TYPOGRAPHY_KEYWORDS if len(keyword) >= 7
+} | {"give", "latest"}
+_TYPOGRAPHY_COMMON_WORDS = {
+    "what", "who", "when", "where", "why", "how", "is", "are", "the", "a",
+    "an", "of", "to", "for", "me", "my", "it", "can", "you", "should",
+    "does", "do", "this", "that", "best", "each", "week", "today", "now",
+    "based", "on", "see",
+}
+_TYPOGRAPHY_CONFIRMATION_PREFIX = "Typo check: Did you mean"
 
 
 class SteviaChatbot:
     """Answers Stevia questions with a fine-tuned BERT classifier and deterministic fallback."""
 
     MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "stevia-intent-bert"
+    _TYPOGRAPHY_CONFIRMATION_PREFIX = _TYPOGRAPHY_CONFIRMATION_PREFIX
     OUT_OF_SCOPE_RESPONSE = "Sorry, your question is outside my scope. I can only answer questions related to stevia."
     SENSOR_RECORDS_CONFIRMATION = (
-        "Before I retrieve the sensor records, would you like a specific number of records "
-        "or the entire set? Reply with a number (for example, 10) or “all”."
+        "How many latest sensor readings would you like? Reply with a number (for example, 3) "
+        'or "all".'
     )
 
     def __init__(self):
@@ -74,6 +101,259 @@ class SteviaChatbot:
             if intent == "general" and matches == {"stevia"}:
                 scores[intent] = 0.0
         return scores
+
+    @staticmethod
+    def _is_single_typo(word: str, candidate: str) -> bool:
+        if abs(len(word) - len(candidate)) > 1 or word == candidate:
+            return False
+
+        if len(word) == len(candidate):
+            differences = [
+                index for index, (left, right) in enumerate(zip(word, candidate))
+                if left != right
+            ]
+            if len(differences) == 1:
+                return True
+            return (
+                len(differences) == 2
+                and differences[1] == differences[0] + 1
+                and word[differences[0]] == candidate[differences[1]]
+                and word[differences[1]] == candidate[differences[0]]
+            )
+
+        shorter, longer = sorted((word, candidate), key=len)
+        shorter_index = longer_index = 0
+        skipped_character = False
+        while shorter_index < len(shorter) and longer_index < len(longer):
+            if shorter[shorter_index] == longer[longer_index]:
+                shorter_index += 1
+                longer_index += 1
+            elif skipped_character:
+                return False
+            else:
+                skipped_character = True
+                longer_index += 1
+        return True
+
+    @classmethod
+    def _correct_typographical_errors(cls, question: str) -> str:
+        corrections = [
+            correction
+            for correction in cls._typographical_corrections(question)
+            if correction[4] == 1
+        ]
+        return cls._apply_typographical_corrections(question, corrections)
+
+    @classmethod
+    def _apply_typographical_corrections(
+        cls,
+        question: str,
+        corrections: list[tuple[int, int, str, str, int]],
+    ) -> str:
+        corrected = question
+        for start, end, word, replacement, distance in reversed(corrections):
+            corrected = corrected[:start] + cls._match_word_case(word, replacement) + corrected[end:]
+        return corrected
+
+    @staticmethod
+    def _match_word_case(word: str, replacement: str) -> str:
+        if word.isupper():
+            return replacement.upper()
+        if word.istitle():
+            return replacement.title()
+        return replacement
+
+    @classmethod
+    def _typographical_corrections(
+        cls,
+        question: str,
+    ) -> list[tuple[int, int, str, str, int]]:
+        corrections = []
+        for match in re.finditer(r"[a-zA-Z]+", question):
+            word = match.group()
+            if len(word) < 4:
+                continue
+            if word.lower() in _TYPOGRAPHY_KEYWORDS or word.lower() in _TYPOGRAPHY_COMMON_WORDS:
+                continue
+
+            candidates = []
+            alias = _TYPOGRAPHY_ALIASES.get(word.lower())
+            if alias:
+                candidates.append((alias, 1))
+            for keyword in _TYPOGRAPHY_KEYWORDS:
+                if len(keyword) < 4 or keyword == word.lower():
+                    continue
+                if cls._is_single_typo(word.lower(), keyword):
+                    candidates.append((keyword, 1))
+                elif keyword in _TYPOGRAPHY_TWO_EDIT_WORDS:
+                    distance = cls._edit_distance(word.lower(), keyword, limit=2)
+                    if distance == 2:
+                        candidates.append((keyword, distance))
+
+            if not candidates:
+                continue
+            best_distance = min(distance for _, distance in candidates)
+            best_candidates = {
+                candidate
+                for candidate, distance in candidates
+                if distance == best_distance
+            }
+            if len(best_candidates) > 1:
+                best_candidates = cls._resolve_typo_candidate_tie(
+                    question,
+                    match.start(),
+                    match.end(),
+                    best_candidates,
+                )
+            if len(best_candidates) == 1:
+                corrections.append((
+                    match.start(),
+                    match.end(),
+                    word,
+                    best_candidates.pop(),
+                    best_distance,
+                ))
+        return corrections
+
+    @staticmethod
+    def _resolve_typo_candidate_tie(
+        question: str,
+        start: int,
+        end: int,
+        candidates: set[str],
+    ) -> set[str]:
+        before = question[:start].lower()
+        after = question[end:].lower()
+        following_word_match = re.match(r"\W*([a-z]+)", after)
+        following_word = following_word_match.group(1) if following_word_match else ""
+        preceding_words = re.findall(r"[a-z]+", before)
+        if (
+            len(preceding_words) >= 2
+            and preceding_words[-2:] == ["can", "you"]
+            and following_word == "me"
+            and "give" in candidates
+        ):
+            return {"give"}
+
+        has_count_before = bool(re.search(r"\b\d+\s+(?:[a-z]+\s+)?$", before))
+        if (
+            has_count_before
+            and candidates.intersection({"reading", "readings", "record", "records"})
+        ):
+            plural_candidates = {candidate for candidate in candidates if candidate.endswith("s")}
+            if plural_candidates:
+                candidates = plural_candidates
+
+        recency_candidates = candidates.intersection({"latest", "newest", "recent", "last"})
+        follows_reading_term = following_word in {
+            "reading", "readings", "sensor", "sensors", "record", "records",
+        } or any(
+            SteviaChatbot._is_single_typo(following_word, reading_term)
+            or SteviaChatbot._edit_distance(following_word, reading_term, limit=2) <= 2
+            for reading_term in ("reading", "readings")
+        )
+        if recency_candidates and follows_reading_term:
+            if "latest" in recency_candidates:
+                return {"latest"}
+            if "newest" in recency_candidates:
+                return {"newest"}
+        return candidates
+
+    @staticmethod
+    def _edit_distance(left: str, right: str, limit: int) -> int:
+        if abs(len(left) - len(right)) > limit:
+            return limit + 1
+
+        previous = list(range(len(right) + 1))
+        for left_index, left_character in enumerate(left, start=1):
+            current = [left_index]
+            for right_index, right_character in enumerate(right, start=1):
+                current.append(min(
+                    current[-1] + 1,
+                    previous[right_index] + 1,
+                    previous[right_index - 1] + (left_character != right_character),
+                ))
+            if min(current) > limit:
+                return limit + 1
+            previous = current
+        return previous[-1]
+
+    @classmethod
+    def _pending_typo_confirmation(
+        cls,
+        history: list[dict[str, Any]] | None,
+    ) -> tuple[str, str] | None:
+        if not isinstance(history, list):
+            return None
+        last_assistant_index = next(
+            (
+                index
+                for index in range(len(history) - 1, -1, -1)
+                if isinstance(history[index], dict)
+                and history[index].get("role") == "assistant"
+            ),
+            None,
+        )
+        if last_assistant_index is None:
+            return None
+
+        last_assistant = str(history[last_assistant_index].get("content", ""))
+        confirmation_pattern = (
+            rf'{re.escape(cls._TYPOGRAPHY_CONFIRMATION_PREFIX)}: \[(.+)\]\? '
+            r'Reply "yes" to use it, or "no" to leave the message unchanged\.'
+        )
+        confirmation_match = re.fullmatch(
+            confirmation_pattern,
+            last_assistant,
+            re.IGNORECASE,
+        )
+        original_question = next(
+            (
+                str(entry.get("content", ""))
+                for entry in reversed(history[:last_assistant_index])
+                if isinstance(entry, dict) and entry.get("role") == "user"
+            ),
+            "",
+        )
+        if confirmation_match:
+            prompt_index = last_assistant_index
+            corrected_question = confirmation_match.group(1)
+        else:
+            prompt_index = last_assistant_index
+            previous_user_message = next(
+                (
+                    str(entry.get("content", "")).strip().casefold()
+                    for entry in reversed(history[:last_assistant_index])
+                    if isinstance(entry, dict) and entry.get("role") == "user"
+                ),
+                "",
+            )
+            if previous_user_message not in {"no", "n", "nope", "not that"}:
+                return None
+            earlier_confirmation = next(
+                (
+                    str(entry.get("content", ""))
+                    for entry in reversed(history[:last_assistant_index])
+                    if isinstance(entry, dict)
+                    and entry.get("role") == "assistant"
+                    and re.fullmatch(
+                        confirmation_pattern,
+                        str(entry.get("content", "")),
+                        re.IGNORECASE,
+                    )
+                ),
+                None,
+            )
+            if earlier_confirmation is None:
+                return None
+            prompt_match = re.fullmatch(confirmation_pattern, earlier_confirmation, re.IGNORECASE)
+            if prompt_match is None:
+                return None
+            corrected_question = prompt_match.group(1)
+
+        if not original_question:
+            return None
+        return original_question, corrected_question
 
     @staticmethod
     def _negated_words(question: str) -> set[str]:
@@ -216,6 +496,42 @@ class SteviaChatbot:
     ) -> dict[str, Any]:
         manual_sensor_data = sensor_data if isinstance(sensor_data, dict) else {}
         combined_sensor_data = {**LATEST_READING, **manual_sensor_data}
+        history = self._history_before_current(question, history)
+        pending_typo = self._pending_typo_confirmation(history)
+        if pending_typo:
+            original_question, corrected_question = pending_typo
+            reply = question.strip().casefold()
+            if reply in {"yes", "y", "correct", "that's right", "that is right"}:
+                question = corrected_question
+            elif reply in {"no", "n", "nope", "not that"}:
+                return self._response(
+                    "Okay. Please rephrase your request with the intended words.",
+                    "Typo clarification",
+                    "typo_clarification",
+                    "typo confirmation",
+                    combined_sensor_data,
+                )
+            else:
+                question = self._correct_typographical_errors(question)
+        corrections = self._typographical_corrections(question)
+        requires_confirmation = (
+            len(corrections) > 1
+            or any(correction[4] > 1 for correction in corrections)
+        )
+        if requires_confirmation:
+            suggested_question = self._apply_typographical_corrections(
+                question,
+                corrections,
+            )
+            return self._response(
+                f"{self._TYPOGRAPHY_CONFIRMATION_PREFIX}: [{suggested_question}]? "
+                'Reply "yes" to use it, or "no" to leave the message unchanged.',
+                "Typo clarification",
+                "typo_clarification",
+                "typo confirmation",
+                combined_sensor_data,
+            )
+        question = self._correct_typographical_errors(question)
 
         if self._is_social_only(question):
             social_reply = "Hi! Ask me about your Stevia plant care, watering, light, soil, or temperature."
@@ -227,7 +543,7 @@ class SteviaChatbot:
 
         if self._is_awaiting_sensor_records_selection(history):
             selection = self._sensor_records_selection(question)
-            if selection is None:
+            if selection is None and not self._is_new_topic_question(question):
                 return self._response(
                     self.SENSOR_RECORDS_CONFIRMATION,
                     "Historical sensor records",
@@ -236,20 +552,43 @@ class SteviaChatbot:
                     combined_sensor_data,
                 )
 
+            if selection is not None:
+                records = load_sensor_records()
+                selected_records = records if selection == "all" else records[:selection]
+                return self._response(
+                    self._sensor_records_summary(selected_records, selection),
+                    "Historical sensor records",
+                    "sensor_records",
+                    "sensor-data",
+                    combined_sensor_data,
+                    sensor_records=selected_records,
+                )
+
+        if self._asks_for_multiple_latest_readings(question):
+            selection = self._sensor_records_selection(question)
             records = load_sensor_records()
-            if selection == "all":
-                answer = self._sensor_records_summary(records)
-            else:
-                answer = self._sensor_records_summary(records[:selection])
-                if len(records) < selection and records:
-                    answer += f"\nOnly {len(records)} records are available."
+            selected_records = records[:selection] if isinstance(selection, int) else records
             return self._response(
-                answer,
+                self._sensor_records_summary(selected_records, selection),
                 "Historical sensor records",
                 "sensor_records",
                 "sensor-data",
                 combined_sensor_data,
-                sensor_records=records if selection == "all" else records[:selection],
+                sensor_records=selected_records,
+            )
+
+        follow_up = self._sensor_records_follow_up(question, history)
+        if follow_up is not None:
+            limit, offset = follow_up
+            records = load_sensor_records()
+            selected_records = records[offset:] if limit == "all" else records[offset:offset + limit]
+            return self._response(
+                self._sensor_records_summary(selected_records, limit, offset),
+                "Historical sensor records",
+                "sensor_records",
+                "sensor-data",
+                combined_sensor_data,
+                sensor_records=selected_records,
             )
 
         if not self._is_in_scope(question, history):
@@ -267,6 +606,24 @@ class SteviaChatbot:
                 "Historical sensor records",
                 "sensor_records",
                 "sensor-record confirmation",
+                combined_sensor_data,
+            )
+
+        if self._asks_for_latest_reading_count(question):
+            return self._response(
+                self.SENSOR_RECORDS_CONFIRMATION,
+                "Historical sensor records",
+                "sensor_records",
+                "sensor-record confirmation",
+                combined_sensor_data,
+            )
+
+        if self._asks_for_sensor_assessment(question):
+            return self._response(
+                self._sensor_reading_assessment(combined_sensor_data),
+                "Sensor-based plant check",
+                "problems",
+                "rule-based sensor assessment",
                 combined_sensor_data,
             )
 
@@ -344,6 +701,43 @@ class SteviaChatbot:
         has_plant_topic = bool(words.intersection(plant_words))
         return has_social and not has_plant_topic
 
+    @staticmethod
+    def _history_before_current(
+        question: str,
+        history: list[dict[str, Any]] | None,
+    ) -> list[dict[str, Any]] | None:
+        if not isinstance(history, list) or not history:
+            return history
+        last_entry = history[-1]
+        if (
+            isinstance(last_entry, dict)
+            and last_entry.get("role") == "user"
+            and str(last_entry.get("content", "")).strip().casefold() == question.strip().casefold()
+        ):
+            return history[:-1]
+        return history
+
+    @classmethod
+    def _replace_word(cls, text: str, word: str, replacement: str) -> str:
+        return re.sub(
+            rf"\b{re.escape(word)}\b",
+            lambda match: cls._match_word_case(match.group(), replacement),
+            text,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+
+    def _is_new_topic_question(self, question: str) -> bool:
+        words = re.findall(r"[a-z]+", question.lower())
+        return (
+            any(score > 0 for score in self._keyword_scores(question).values())
+            or (
+                len(words) > 2
+                and words[0] in {"what", "how", "where", "why", "when", "who", "which"}
+                and words[:2] != ["how", "many"]
+            )
+        )
+
     def _is_in_scope(
         self,
         question: str,
@@ -380,6 +774,18 @@ class SteviaChatbot:
         return bool(words.intersection({"sensor", "sensors", "reading", "readings", "measurement", "measurements", "snapshot"}))
 
     @staticmethod
+    def _asks_for_sensor_assessment(question: str) -> bool:
+        words = set(re.findall(r"[a-z]+", question.lower()))
+        asks_about_health = bool(words.intersection({
+            "problem", "problems", "issue", "issues", "wrong", "healthy", "health",
+            "concern", "concerns", "trouble", "disease",
+        }))
+        refers_to_readings = bool(words.intersection({
+            "reading", "readings", "sensor", "sensors", "data", "based",
+        }))
+        return asks_about_health and refers_to_readings
+
+    @staticmethod
     def _asks_for_sensor_records(question: str) -> bool:
         words = set(re.findall(r"[a-z]+", question.lower()))
         record_terms = {"record", "records", "recorded", "log", "logs"}
@@ -389,6 +795,136 @@ class SteviaChatbot:
             bool(words.intersection(history_terms))
             and bool(words.intersection(sensor_terms))
         )
+
+    @classmethod
+    def _asks_for_multiple_latest_readings(cls, question: str) -> bool:
+        words = set(re.findall(r"[a-z]+", question.lower()))
+        recency_terms = {"latest", "newest", "recent", "last"}
+        sensor_terms = {"sensor", "sensors", "reading", "readings", "measurement", "measurements"}
+        selection = cls._sensor_records_selection(question)
+        return (
+            isinstance(selection, int)
+            and selection > 1
+            and bool(words.intersection(recency_terms))
+            and bool(words.intersection(sensor_terms))
+        )
+
+    @classmethod
+    def _asks_for_latest_reading_count(cls, question: str) -> bool:
+        words = set(re.findall(r"[a-z]+", question.lower()))
+        plural_reading_terms = {"sensors", "readings", "measurements", "data"}
+        latest_terms = {"latest", "newest", "recent", "last"}
+        return (
+            bool(words.intersection(plural_reading_terms))
+            and bool(words.intersection(latest_terms))
+            and cls._sensor_records_selection(question) is None
+        )
+
+    @classmethod
+    def _sensor_records_follow_up(
+        cls,
+        question: str,
+        history: list[dict[str, Any]] | None,
+    ) -> tuple[int | str, int] | None:
+        if not isinstance(history, list):
+            return None
+
+        previous_user_message = next(
+            (
+                str(entry.get("content", ""))
+                for entry in reversed(history)
+                if isinstance(entry, dict) and entry.get("role") == "user"
+            ),
+            "",
+        )
+        previous_assistant_message = next(
+            (
+                str(entry.get("content", ""))
+                for entry in reversed(history)
+                if isinstance(entry, dict) and entry.get("role") == "assistant"
+            ),
+            "",
+        )
+        has_sensor_record_context = (
+            cls._asks_for_current_readings(previous_user_message)
+            or cls._asks_for_sensor_records(previous_user_message)
+            or cls._asks_for_multiple_latest_readings(previous_user_message)
+            or bool(re.search(
+                r"\b(?:historical sensor records|showing (?:all )?\d+ sensor readings?)\b",
+                previous_assistant_message,
+                re.IGNORECASE,
+            ))
+        )
+        if not has_sensor_record_context:
+            return None
+
+        words = set(re.findall(r"[a-z]+", question.lower()))
+        is_next_page = "next" in words
+        asks_for_latest = bool(words.intersection({"latest", "newest", "recent", "last"}))
+        asks_for_table = bool(re.search(r"\btable\b", question, re.IGNORECASE))
+        selection = cls._sensor_records_selection(question)
+        asks_for_count = isinstance(selection, int)
+        if not (is_next_page or asks_for_latest or asks_for_table or asks_for_count):
+            return None
+
+        previous_page = cls._previous_sensor_record_page(history)
+        previous_count = (
+            previous_page[1]
+            if previous_page is not None
+            else cls._previous_sensor_record_count(history)
+        )
+        requested_count = selection
+        if is_next_page:
+            limit = requested_count if isinstance(requested_count, int) else previous_count or 3
+            offset = (
+                previous_page[0] + previous_page[1]
+                if previous_page is not None
+                else previous_count or 0
+            )
+            return limit, offset
+        if asks_for_count:
+            return requested_count, 0
+        if asks_for_latest:
+            limit = requested_count if isinstance(requested_count, int) else previous_count or 3
+            return limit, 0
+        offset = previous_page[0] if previous_page is not None else 0
+        return previous_count or 3, offset
+
+    @classmethod
+    def _previous_sensor_record_count(cls, history: list[dict[str, Any]]) -> int | None:
+        previous_page = cls._previous_sensor_record_page(history)
+        if previous_page is not None:
+            return previous_page[1]
+
+        for entry in reversed(history):
+            if isinstance(entry, dict) and entry.get("role") == "user":
+                selection = cls._sensor_records_selection(str(entry.get("content", "")))
+                if isinstance(selection, int):
+                    return selection
+        return None
+
+    @staticmethod
+    def _previous_sensor_record_page(
+        history: list[dict[str, Any]],
+    ) -> tuple[int, int] | None:
+        for entry in reversed(history):
+            if not isinstance(entry, dict) or entry.get("role") != "assistant":
+                continue
+            content = str(entry.get("content", ""))
+            match = re.search(
+                r"\bshowing\s+(?:all\s+)?(\d+)\s+sensor\s+readings?"
+                r"(?:\s+\(records\s+(\d+)-(\d+)\))?",
+                content,
+                re.IGNORECASE,
+            )
+            if match:
+                count = int(match.group(1))
+                offset = int(match.group(2)) - 1 if match.group(2) else 0
+                return offset, count
+            match = re.search(r"\((\d+)\s+timestamped\s+records?\b", content, re.IGNORECASE)
+            if match:
+                return 0, int(match.group(1))
+        return None
 
     @classmethod
     def _is_awaiting_sensor_records_selection(
@@ -412,6 +948,21 @@ class SteviaChatbot:
         if match:
             count = int(match.group(1))
             return count if count > 0 else None
+        number_words = {
+            "one": 1,
+            "two": 2,
+            "three": 3,
+            "four": 4,
+            "five": 5,
+            "six": 6,
+            "seven": 7,
+            "eight": 8,
+            "nine": 9,
+            "ten": 10,
+        }
+        for word, count in number_words.items():
+            if re.search(rf"\b{word}\b", normalized):
+                return count
         return None
 
     @staticmethod
@@ -484,44 +1035,97 @@ class SteviaChatbot:
         return summaries[0]
 
     @staticmethod
-    def _sensor_records_summary(records: list[dict[str, Any]]) -> str:
+    def _sensor_records_summary(
+        records: list[dict[str, Any]],
+        selection: int | str | None = None,
+        offset: int = 0,
+    ) -> str:
         if not records:
             return "No historical Stevia sensor records are available."
 
-        labels_and_units = {
-            "temperature": ("temperature", "C"),
-            "humidity": ("humidity", "%"),
-            "water_level": ("soil moisture", "%"),
-            "soil_ph": ("soil pH", "pH"),
-            "soil_temperature": ("soil temperature", "C"),
-            "light_intensity": ("light intensity", "lux"),
-            "water_tds": ("water TDS", "ppm"),
-            "battery_voltage": ("battery voltage", "V"),
-            "nitrogen": ("nitrogen", ""),
-            "phosphorus": ("phosphorus", ""),
-            "potassium": ("potassium", ""),
-            "fan_on": ("fan", ""),
-            "watering_pump_on": ("watering pump", ""),
-            "water_pump_on": ("water pump", ""),
-        }
-        record_label = "record" if len(records) == 1 else "records"
-        lines = [
-            f"Historical Stevia sensor records ({len(records)} timestamped {record_label}, newest first):"
-        ]
-        for record in records:
-            values = []
-            for key, (label, unit) in labels_and_units.items():
-                if key not in record:
-                    continue
-                value = record[key]
-                if key.endswith("_on"):
-                    value = "on" if value else "off"
-                    values.append(f"{label} {value}")
-                else:
-                    values.append(f"{label} {value} {unit}".rstrip())
-            if values:
-                lines.append(f"{record.get('recorded_at', 'unknown time')}: {', '.join(values)}")
-        return "\n".join(lines)
+        reading_label = "reading" if len(records) == 1 else "readings"
+        record_range = f"(records {offset + 1}-{offset + len(records)})"
+        if selection == "all":
+            return f"Showing all {len(records)} sensor {reading_label} {record_range}, newest first."
+        if isinstance(selection, int) and len(records) < selection:
+            requested_label = "reading" if selection == 1 else "readings"
+            return (
+                f"Showing {len(records)} of {selection} requested sensor {requested_label} "
+                f"{record_range}, newest first."
+            )
+        return f"Showing {len(records)} sensor {reading_label} {record_range}, newest first."
+
+    @staticmethod
+    def _sensor_reading_assessment(sensor_data: dict[str, Any]) -> str:
+        if not sensor_data:
+            return (
+                "I don't have current sensor readings to assess. Share the latest readings or "
+                "describe the plant's symptoms, and I can help narrow down possible causes."
+            )
+
+        profiles = (
+            ("temperature", "temperature", "temperature", "celsius", "C"),
+            ("humidity", "relative_humidity", "humidity", "percent", "%"),
+            ("soil_ph", "soil_pH", "soil pH", "pH", ""),
+        )
+        concerns = []
+        in_range = []
+        for sensor_key, parameter, label, unit, display_unit in profiles:
+            value = sensor_data.get(sensor_key)
+            if value is None:
+                continue
+            try:
+                numeric_value = float(value)
+            except (TypeError, ValueError):
+                continue
+
+            target = next(
+                (
+                    item for item in SPROUT_KNOWLEDGE
+                    if item.get("parameter", "").lower() == parameter.lower()
+                ),
+                None,
+            )
+            optimal_range = target.get("optimal_range") if target else None
+            if not optimal_range:
+                continue
+
+            if numeric_value < optimal_range[0] or numeric_value > optimal_range[1]:
+                direction = "below" if numeric_value < optimal_range[0] else "above"
+                value_text = f"{numeric_value:g}{display_unit}" if display_unit == "%" else f"{numeric_value:g} {display_unit}".strip()
+                concerns.append(
+                    f"{label} {value_text} is {direction} the "
+                    f"{optimal_range[0]:g}-{optimal_range[1]:g} {unit} target"
+                )
+            else:
+                value_text = f"{numeric_value:g}{display_unit}" if display_unit == "%" else f"{numeric_value:g} {display_unit}".strip()
+                in_range.append(f"{label} {value_text}")
+
+        if concerns:
+            assessment = "The readings flag conditions to check, not a diagnosis: " + "; ".join(concerns) + "."
+            if any(concern.startswith("humidity ") for concern in concerns):
+                assessment += " Improve airflow and inspect leaves for fungal spots."
+            if any(concern.startswith("soil pH ") for concern in concerns):
+                assessment += " Verify pH with a fresh soil test before adjusting."
+            if in_range:
+                assessment += f" Also within target: {', '.join(in_range)}."
+        elif in_range:
+            assessment = (
+                f"Readings are within target: {', '.join(in_range)}; "
+                "they don't indicate a clear problem."
+            )
+        else:
+            assessment = (
+                "The available readings can't establish whether the plant has a problem; "
+                "some key values are missing or don't have calibrated diagnostic ranges."
+            )
+
+        if sensor_data.get("water_level", sensor_data.get("soil_moisture")) is not None:
+            assessment += (
+                " Soil-moisture percentage has no calibrated wet/dry threshold."
+            )
+        assessment += " Share visible symptoms for a better assessment."
+        return assessment
 
     @staticmethod
     def _choose_response(

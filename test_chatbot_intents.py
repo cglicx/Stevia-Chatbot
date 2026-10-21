@@ -55,6 +55,182 @@ class ChatbotIntentTests(unittest.TestCase):
         )
         self.assertEqual(result["intent"], "out_of_scope")
 
+    def test_typographical_error_is_corrected_for_intent_routing(self):
+        chatbot = SteviaChatbot()
+        with patch.object(chatbot, "_model_scores", return_value={}), \
+             patch.object(chatbot, "_llm_answer", return_value=None):
+            result = chatbot.answer("How often should I waer?")
+
+        self.assertEqual(result["intent"], "watering")
+
+    def test_typographical_errors_are_corrected_for_sensor_requests(self):
+        chatbot = SteviaChatbot()
+        with patch.object(
+            chatbot,
+            "_model_scores",
+            side_effect=AssertionError("classifier should not handle readings"),
+        ):
+            result = chatbot.answer("What are the latest sensr readngs?")
+
+        self.assertEqual(result["intent"], "typo_clarification")
+        self.assertIn("latest sensor readings", result["answer"])
+
+    def test_typo_correction_does_not_change_unrelated_questions(self):
+        chatbot = SteviaChatbot()
+        with patch.object(chatbot, "_model_scores", return_value={}):
+            result = chatbot.answer("What is a banana?")
+
+        self.assertEqual(result["intent"], "out_of_scope")
+
+    def test_typo_correction_preserves_valid_singular_sensor_terms(self):
+        self.assertEqual(
+            SteviaChatbot._correct_typographical_errors("latest sensor reading"),
+            "latest sensor reading",
+        )
+
+    def test_missing_letter_typo_in_stevia_routes_to_stevia_answer(self):
+        chatbot = SteviaChatbot()
+        with patch.object(chatbot, "_model_scores", return_value={}), \
+             patch.object(chatbot, "_llm_answer", return_value=None):
+            result = chatbot.answer("what is stvia?")
+
+        self.assertEqual(result["intent"], "general")
+        self.assertEqual(result["topic"], "About Stevia")
+        self.assertIn("Stevia (Stevia rebaudiana)", result["answer"])
+        self.assertNotEqual(result["intent"], "problems")
+
+    def test_significant_typo_asks_for_confirmation(self):
+        chatbot = SteviaChatbot()
+        with patch.object(chatbot, "_model_scores", side_effect=AssertionError("clarification should precede intent classification")):
+            result = chatbot.answer("What temparatur is best?")
+
+        self.assertEqual(result["intent"], "typo_clarification")
+        self.assertEqual(result["source"], "typo confirmation")
+        self.assertIn("Did you mean: [What temperature is best?]?", result["answer"])
+
+    def test_confirmed_typo_correction_answers_original_question(self):
+        chatbot = SteviaChatbot()
+        original_question = "What temparatur is best?"
+        confirmation = chatbot.answer(original_question)
+        with patch.object(chatbot, "_model_scores", return_value={}), \
+             patch.object(chatbot, "_llm_answer", return_value=None):
+            result = chatbot.answer(
+                "yes",
+                history=[
+                    {"role": "user", "content": original_question},
+                    {"role": "assistant", "content": confirmation["answer"]},
+                    {"role": "user", "content": "yes"},
+                ],
+            )
+
+        self.assertEqual(result["intent"], "temperature")
+        self.assertIn("18-28 celsius", result["answer"])
+
+    def test_rejected_typo_suggestion_requests_intended_word(self):
+        chatbot = SteviaChatbot()
+        original_question = "What temparatur is best?"
+        confirmation = chatbot.answer(original_question)
+        result = chatbot.answer(
+            "no",
+            history=[
+                {"role": "user", "content": original_question},
+                {"role": "assistant", "content": confirmation["answer"]},
+                {"role": "user", "content": "no"},
+            ],
+        )
+
+        self.assertEqual(result["intent"], "typo_clarification")
+        self.assertIn("Please rephrase your request", result["answer"])
+
+    def test_user_can_supply_replacement_word_after_typo_prompt(self):
+        chatbot = SteviaChatbot()
+        original_question = "What temparatur is best?"
+        confirmation = chatbot.answer(original_question)
+        with patch.object(chatbot, "_model_scores", return_value={}), \
+             patch.object(chatbot, "_llm_answer", return_value=None):
+            result = chatbot.answer(
+                "humidity",
+                history=[
+                    {"role": "user", "content": original_question},
+                    {"role": "assistant", "content": confirmation["answer"]},
+                    {"role": "user", "content": "humidity"},
+                ],
+            )
+
+        self.assertEqual(result["intent"], "humidity")
+
+    def test_replacement_word_is_accepted_after_user_rejects_suggestion(self):
+        chatbot = SteviaChatbot()
+        original_question = "What temparatur is best?"
+        confirmation = chatbot.answer(original_question)
+        rejection = chatbot.answer(
+            "no",
+            history=[
+                {"role": "user", "content": original_question},
+                {"role": "assistant", "content": confirmation["answer"]},
+                {"role": "user", "content": "no"},
+            ],
+        )
+        with patch.object(chatbot, "_model_scores", return_value={}), \
+             patch.object(chatbot, "_llm_answer", return_value=None):
+            result = chatbot.answer(
+                "humidity",
+                history=[
+                    {"role": "user", "content": original_question},
+                    {"role": "assistant", "content": confirmation["answer"]},
+                    {"role": "user", "content": "no"},
+                    {"role": "assistant", "content": rejection["answer"]},
+                    {"role": "user", "content": "humidity"},
+                ],
+            )
+
+        self.assertEqual(result["intent"], "humidity")
+
+    def test_several_minor_typos_prompt_with_full_corrected_sensor_request(self):
+        chatbot = SteviaChatbot()
+        question = "can you gibr me the 5 latsy readins of sensir?"
+        with patch.object(
+            chatbot,
+            "_model_scores",
+            side_effect=AssertionError("the typo prompt must come before intent routing"),
+        ):
+            result = chatbot.answer(question)
+
+        self.assertEqual(result["intent"], "typo_clarification")
+        self.assertIn(
+            "Did you mean: [can you give me the 5 latest readings of sensor?]?",
+            result["answer"],
+        )
+
+    def test_confirming_multi_typo_request_returns_five_latest_sensor_records(self):
+        chatbot = SteviaChatbot()
+        question = "can you gibr me the 5 latsy readins of sensir?"
+        prompt = chatbot.answer(question)
+        records = [
+            {"recorded_at": f"2024-09-27 13:{minute}:26", "temperature": value}
+            for minute, value in (
+                ("28", 26.8),
+                ("27", 26.7),
+                ("26", 26.6),
+                ("25", 26.5),
+                ("24", 26.4),
+                ("23", 26.3),
+            )
+        ]
+        with patch("stevia_bot.chatbot.load_sensor_records", return_value=records), \
+             patch.object(chatbot, "_model_scores", side_effect=AssertionError("sensor record retrieval should not use the classifier")):
+            result = chatbot.answer(
+                "yes",
+                history=[
+                    {"role": "user", "content": question},
+                    {"role": "assistant", "content": prompt["answer"]},
+                    {"role": "user", "content": "yes"},
+                ],
+            )
+
+        self.assertEqual(result["intent"], "sensor_records")
+        self.assertEqual(result["sensor_records"], records[:5])
+
     def test_stevia_question_is_not_rejected_by_scope_check(self):
         chatbot = SteviaChatbot()
         with patch.object(chatbot, "_model_scores", return_value={}):
@@ -197,6 +373,42 @@ class ChatbotIntentTests(unittest.TestCase):
         self.assertIn("water level 64.05%", result["answer"])
         self.assertNotIn("soil-moisture classifications", result["answer"])
 
+    def test_sensor_based_plant_problem_question_assesses_readings(self):
+        chatbot = SteviaChatbot()
+        readings = {
+            "temperature": 26.7,
+            "humidity": 95.0,
+            "water_level": 64.05,
+            "soil_ph": 6.1,
+            "light_intensity": 43.74,
+            "sensor_units": {"light_intensity": "lux"},
+        }
+        with patch("stevia_bot.chatbot.LATEST_READING", readings), \
+             patch.object(chatbot, "_model_scores", side_effect=AssertionError("sensor assessment should not use classifier")), \
+             patch.object(chatbot, "_llm_answer", side_effect=AssertionError("sensor assessment should be deterministic")):
+            result = chatbot.answer(
+                "Based on readings, do you see a problem through my plant?",
+                history=[
+                    {"role": "user", "content": "Can you send me the latest sensor readings?"},
+                    {"role": "assistant", "content": "Latest snapshot: temperature 26.7 C, humidity 95%, water level 64.05%."},
+                ],
+            )
+
+        self.assertEqual(result["intent"], "problems")
+        self.assertEqual(result["source"], "rule-based sensor assessment")
+        self.assertIn("humidity 95% is above the 65-80 percent target", result["answer"])
+        self.assertIn("soil pH 6.1 is below the 6.5-7.2 pH target", result["answer"])
+        self.assertIn("Improve airflow and inspect leaves for fungal spots", result["answer"])
+        self.assertIn("not a diagnosis", result["answer"])
+        self.assertIn("no calibrated wet/dry threshold", result["answer"])
+        self.assertNotIn("Latest snapshot", result["answer"])
+
+    def test_sensor_assessment_reports_when_no_readings_are_available(self):
+        answer = SteviaChatbot._sensor_reading_assessment({})
+
+        self.assertIn("don't have current sensor readings to assess", answer)
+        self.assertIn("describe the plant's symptoms", answer)
+
     def test_records_request_confirms_selection_before_returning_history(self):
         chatbot = SteviaChatbot()
         records = [
@@ -215,15 +427,83 @@ class ChatbotIntentTests(unittest.TestCase):
                 ],
             )
 
-        self.assertIn("specific number of records or the entire set", prompt["answer"])
+        self.assertIn("How many latest sensor readings", prompt["answer"])
         self.assertEqual(prompt["source"], "sensor-record confirmation")
         self.assertEqual(result["intent"], "sensor_records")
         self.assertEqual(result["topic"], "Historical sensor records")
-        self.assertIn("1 timestamped record, newest first", result["answer"])
-        self.assertIn("2024-09-27 13:28:26: temperature 26.7 C, water TDS 118.11 ppm", result["answer"])
-        self.assertNotIn("2024-09-27 13:28:13", result["answer"])
+        self.assertIn("1 sensor reading (records 1-1), newest first", result["answer"])
         self.assertEqual(len(result["sensor_records"]), 1)
         self.assertEqual(result["sensor_records"][0]["temperature"], 26.7)
+
+    def test_counted_latest_sensor_request_returns_exactly_three_newest_records(self):
+        chatbot = SteviaChatbot()
+        records = [
+            {"recorded_at": f"2024-09-27 13:{minute}:26", "temperature": value}
+            for minute, value in (("28", 26.8), ("27", 26.7), ("26", 26.6), ("25", 26.5))
+        ]
+        with patch("stevia_bot.chatbot.load_sensor_records", return_value=records), \
+             patch.object(chatbot, "_model_scores", side_effect=AssertionError("classifier should not handle records")):
+            result = chatbot.answer("Can you send me the 3 latest sensor readings?")
+
+        self.assertEqual(result["intent"], "sensor_records")
+        self.assertEqual(result["sensor_records"], records[:3])
+        self.assertIn("3 sensor readings (records 1-3), newest first", result["answer"])
+        self.assertNotIn("13:25:26", result["answer"])
+
+    def test_short_sensor_follow_up_uses_prior_turn_not_current_message(self):
+        chatbot = SteviaChatbot()
+        records = [
+            {"recorded_at": f"2024-09-27 13:{minute}:26", "temperature": value}
+            for minute, value in (("28", 26.8), ("27", 26.7), ("26", 26.6), ("25", 26.5))
+        ]
+        current_question = "the 3 latest"
+        history = [
+            {"role": "user", "content": "Can you send me the 3 latest sensor readings?"},
+            {"role": "assistant", "content": "Latest snapshot (2024-09-27 13:28:26): temperature 26.8 C."},
+            {"role": "user", "content": current_question},
+        ]
+        with patch("stevia_bot.chatbot.load_sensor_records", return_value=records), \
+             patch.object(chatbot, "_model_scores", side_effect=AssertionError("classifier should not handle records")):
+            result = chatbot.answer(current_question, history=history)
+
+        self.assertEqual(result["intent"], "sensor_records")
+        self.assertEqual(result["sensor_records"], records[:3])
+
+    def test_next_three_sensor_follow_up_returns_next_page(self):
+        chatbot = SteviaChatbot()
+        records = [
+            {"recorded_at": f"2024-09-27 13:{minute}:26", "temperature": value}
+            for minute, value in (("28", 26.8), ("27", 26.7), ("26", 26.6), ("25", 26.5), ("24", 26.4), ("23", 26.3))
+        ]
+        history = [
+            {"role": "user", "content": "Can you send me the 3 latest sensor readings?"},
+            {"role": "assistant", "content": "Historical sensor records (3 timestamped records, newest first):"},
+            {"role": "user", "content": "show me the next three"},
+        ]
+        with patch("stevia_bot.chatbot.load_sensor_records", return_value=records), \
+             patch.object(chatbot, "_model_scores", side_effect=AssertionError("classifier should not handle records")):
+            result = chatbot.answer("show me the next three", history=history)
+
+        self.assertEqual(result["intent"], "sensor_records")
+        self.assertEqual(result["sensor_records"], records[3:6])
+
+    def test_table_follow_up_reuses_previous_sensor_record_selection(self):
+        chatbot = SteviaChatbot()
+        records = [
+            {"recorded_at": "2024-09-27 13:28:26", "temperature": 26.8},
+            {"recorded_at": "2024-09-27 13:27:26", "temperature": 26.7},
+        ]
+        history = [
+            {"role": "user", "content": "Show me the 2 latest sensor readings."},
+            {"role": "assistant", "content": "Historical sensor records (2 timestamped records, newest first):"},
+            {"role": "user", "content": "put them in a table"},
+        ]
+        with patch("stevia_bot.chatbot.load_sensor_records", return_value=records), \
+             patch.object(chatbot, "_model_scores", side_effect=AssertionError("classifier should not handle records")):
+            result = chatbot.answer("put them in a table", history=history)
+
+        self.assertEqual(result["intent"], "sensor_records")
+        self.assertEqual(result["sensor_records"], records)
 
     def test_all_recorded_measurements_returns_full_history_after_selection(self):
         chatbot = SteviaChatbot()
@@ -244,8 +524,7 @@ class ChatbotIntentTests(unittest.TestCase):
             )
 
         self.assertEqual(result["intent"], "sensor_records")
-        self.assertIn("2 timestamped records, newest first", result["answer"])
-        self.assertIn("2024-09-27 13:28:13", result["answer"])
+        self.assertIn("all 2 sensor readings (records 1-2), newest first", result["answer"])
         self.assertEqual(len(result["sensor_records"]), 2)
 
     def test_invalid_record_selection_repeats_confirmation_without_loading(self):
