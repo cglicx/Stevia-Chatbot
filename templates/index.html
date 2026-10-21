@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stevia Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-mark" aria-hidden="true">S</div>
+      <p class="eyebrow">Plant intelligence</p>
+      <h1>Stevia<br><em>Guide</em></h1>
+      <p class="intro">A calm, practical companion for growing sweeter leaves.</p>
+      <div class="status"><span></span><div><strong>Knowledge base online</strong><small>BERT topic matching ready</small></div></div>
+      <div class="sidebar-footer">Version 1.0<br><span>Sensor connection: planned</span></div>
+    </aside>
+    <section class="chat-panel">
+      <header class="chat-header"><div><p class="eyebrow">Your growing room</p><h2>Ask about your Stevia</h2></div></header>
+      <div id="messages" class="messages" aria-live="polite">
+        <article class="message bot"><div class="avatar">S</div><div class="bubble"><p>{{ welcome_message }}</p><small>Stevia Guide · ready now</small></div></article>
+      </div>
+      <div class="suggestions" aria-label="Suggested questions">
+        {% for question in suggested_questions %}<button type="button" class="suggestion">{{ question }}</button>{% endfor %}
+      </div>
+      <form id="chat-form" class="composer"><label for="message" class="sr-only">Your question</label><input id="message" name="message" autocomplete="off" placeholder="Ask a question about your plant..." required><button aria-label="Send question" type="submit"><span>Send</span> ↑</button></form>
+      <p class="disclaimer">Advice is general plant-care guidance. Always check your plant's actual conditions.</p>
+    </section>
+  </main>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

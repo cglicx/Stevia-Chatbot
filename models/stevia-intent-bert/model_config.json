@@ -1,0 +1,52 @@
+{
+  "model_name": "multilingual-character-word-tfidf-sgd",
+  "model_type": "TF-IDF character and word n-gram features with Tagalog/Taglish normalization and incremental SGD logistic regression",
+  "labels": [
+    "fertilization",
+    "general",
+    "growing",
+    "humidity",
+    "problems",
+    "sensor_records",
+    "soil",
+    "sunlight",
+    "temperature",
+    "watering"
+  ],
+  "vectorizer": {
+    "type": "character and word n-gram TF-IDF feature union",
+    "normalization": "common Tagalog and Taglish care terms normalized before vectorization",
+    "features": {
+      "character": {
+        "analyzer": "char_wb",
+        "ngram_range": [
+          2,
+          5
+        ],
+        "vocabulary_size": 8449
+      },
+      "word": {
+        "analyzer": "word",
+        "ngram_range": [
+          1,
+          2
+        ],
+        "vocabulary_size": 3925
+      }
+    },
+    "feature_weights": {
+      "character": 1.0,
+      "word": 0.8
+    },
+    "total_vocabulary_size": 12374
+  },
+  "batch_size": 32,
+  "learning_rate": 0.05,
+  "alpha": 1e-05,
+  "epochs_completed": 50,
+  "best_epoch": 50,
+  "early_stopping_patience": 5,
+  "confidence_temperature": 0.4363550841808319,
+  "intent_confidence_threshold": 0.66,
+  "training_device": "cpu"
+}
