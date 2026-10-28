@@ -99,7 +99,7 @@ The browser also sends the last few turns as `history`, allowing short follow-up
 }
 ```
 
-For mobile clients, a device confirmation can also include the `device_command` object returned by the initial `/api/chat` response. Send that object as `pending_device_command` with the user's reply so confirmation works even if the app does not resend conversation history:
+For mobile clients, a device confirmation response includes button choices in `confirmation.options`, `quick_replies`, and `buttons`, plus the canonical device command as `device_command` (also `deviceCommand`). The mobile UI must render those button choices. Send the command object as `pending_device_command` or `pendingDeviceCommand` with the user's reply so confirmation works even if the app does not resend conversation history:
 
 ```json
 {

@@ -1,7 +1,7 @@
 from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from stevia_bot.chatbot import SteviaChatbot
 from stevia_bot.device_control import DeviceControlError, send_device_command
@@ -21,10 +21,15 @@ class PendingDeviceCommand(BaseModel):
 
 
 class ChatRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     message: str
     sensor_data: dict[str, Any] | None = None
     history: list[ChatTurn] | None = None
-    pending_device_command: PendingDeviceCommand | None = None
+    pending_device_command: PendingDeviceCommand | None = Field(
+        default=None,
+        alias="pendingDeviceCommand",
+    )
 
 
 class DeviceCommandRequest(PendingDeviceCommand):
@@ -38,7 +43,17 @@ def chat(payload: ChatRequest) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail="Please enter a question.")
 
     history = (
-        [{"role": turn.role, "content": turn.content} for turn in payload.history]
+        [
+            {
+                "role": (
+                    "assistant"
+                    if turn.role.casefold() in {"bot", "ai"}
+                    else turn.role
+                ),
+                "content": turn.content,
+            }
+            for turn in payload.history
+        ]
         if payload.history is not None
         else None
     )
@@ -52,6 +67,14 @@ def chat(payload: ChatRequest) -> dict[str, Any]:
             else None
         ),
     )
+    if result.get("confirmation", {}).get("required") is True:
+        quick_replies = [
+            {"text": option["label"], "value": option["value"]}
+            for option in result["confirmation"]["options"]
+        ]
+        result["quick_replies"] = quick_replies
+        result["buttons"] = quick_replies
+        result["deviceCommand"] = result["device_command"]
     if result.get("execute_device_command") is True:
         command = result["device_command"]
         try:

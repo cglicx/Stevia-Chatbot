@@ -22,6 +22,12 @@ class FastApiDeviceCommandTests(unittest.TestCase):
             [option["label"] for option in payload["confirmation"]["options"]],
             ["Yes", "No"],
         )
+        self.assertEqual(
+            payload["quick_replies"],
+            [{"text": "Yes", "value": "yes"}, {"text": "No", "value": "no"}],
+        )
+        self.assertEqual(payload["buttons"], payload["quick_replies"])
+        self.assertEqual(payload["deviceCommand"], payload["device_command"])
 
     def test_chat_yes_reply_executes_pending_device_command_and_confirms_state(self):
         with patch(
@@ -120,6 +126,58 @@ class FastApiDeviceCommandTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Cancelled", response.json()["answer"])
         send_command.assert_not_called()
+
+    def test_chat_yes_accepts_camel_case_pending_context_and_punctuation(self):
+        with patch(
+            "fastapi_app.send_device_command",
+            return_value={
+                "success": True,
+                "device": "fan",
+                "action": "ON",
+                "reported_state": "ON",
+                "message": "The fan is ON according to the latest device report.",
+            },
+        ) as send_command:
+            response = self.client.post(
+                "/api/chat",
+                json={
+                    "message": "Yes!",
+                    "pendingDeviceCommand": {"device": "fan", "action": "ON"},
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["intent"], "device_control")
+        send_command.assert_called_once_with("fan", "ON")
+
+    def test_chat_yes_recognizes_bot_role_in_history(self):
+        with patch(
+            "fastapi_app.send_device_command",
+            return_value={
+                "success": True,
+                "device": "fan",
+                "action": "ON",
+                "reported_state": "ON",
+                "message": "The fan is ON according to the latest device report.",
+            },
+        ) as send_command:
+            response = self.client.post(
+                "/api/chat",
+                json={
+                    "message": "Yes",
+                    "history": [
+                        {"role": "user", "content": "open fan"},
+                        {
+                            "role": "bot",
+                            "content": "Would you like me to turn on the fan?",
+                        },
+                    ],
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["intent"], "device_control")
+        send_command.assert_called_once_with("fan", "ON")
 
     def test_device_command_is_forwarded_only_after_confirmation(self):
         with patch(

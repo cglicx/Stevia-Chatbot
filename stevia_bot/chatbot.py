@@ -881,10 +881,14 @@ class SteviaChatbot:
                         "pump": "pump",
                     }[context_device],
                 }
-        confirmation_reply = question.strip().casefold()
+        confirmation_reply = re.sub(
+            r"[^a-z]+",
+            " ",
+            question.strip().casefold(),
+        ).strip()
         if pending_device_command and confirmation_reply in {
-            "yes", "y", "yeah", "yep", "sure", "go ahead", "confirm",
-            "oo", "opo", "sige", "tama",
+            "yes", "y", "yeah", "yep", "yes please", "yeah please", "okay",
+            "ok", "sure", "go ahead", "confirm", "oo", "opo", "sige", "tama",
         }:
             device_name = pending_device_command["label"]
             action_label = "on" if pending_device_command["action"] == "ON" else "off"
@@ -902,7 +906,8 @@ class SteviaChatbot:
             result["execute_device_command"] = True
             return result
         if pending_device_command and confirmation_reply in {
-            "no", "n", "nope", "cancel", "cancel it", "hindi", "hindi po", "ayaw",
+            "no", "n", "nope", "no thanks", "cancel", "cancel it", "hindi",
+            "hindi po", "ayaw",
         }:
             return respond(
                 "Sige, nakansela. Walang device command na ipinadala."

@@ -25,7 +25,10 @@ def chat():
     question = str(payload.get("message", "")).strip()
     sensor_data = payload.get("sensor_data")
     history = payload.get("history")
-    pending_device_command = payload.get("pending_device_command")
+    pending_device_command = payload.get(
+        "pending_device_command",
+        payload.get("pendingDeviceCommand"),
+    )
 
     if not question:
         return jsonify({"error": "Please enter a question."}), 400
@@ -37,6 +40,21 @@ def chat():
         or pending_device_command.get("action") not in {"ON", "OFF"}
     ):
         return jsonify({"error": "Invalid pending device command."}), 400
+    if isinstance(history, list):
+        history = [
+            {
+                **turn,
+                "role": (
+                    "assistant"
+                    if isinstance(turn.get("role"), str)
+                    and turn["role"].casefold() in {"bot", "ai"}
+                    else turn.get("role")
+                ),
+            }
+            if isinstance(turn, dict)
+            else turn
+            for turn in history
+        ]
 
     result = chatbot.answer(
         question,
@@ -44,6 +62,14 @@ def chat():
         history=history,
         pending_device_context=pending_device_command,
     )
+    if result.get("confirmation", {}).get("required") is True:
+        quick_replies = [
+            {"text": option["label"], "value": option["value"]}
+            for option in result["confirmation"]["options"]
+        ]
+        result["quick_replies"] = quick_replies
+        result["buttons"] = quick_replies
+        result["deviceCommand"] = result["device_command"]
     if result.get("execute_device_command") is True:
         command = result["device_command"]
         try:
