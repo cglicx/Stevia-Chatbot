@@ -6,7 +6,6 @@ import random
 import re
 from pathlib import Path
 
-<<<<<<< HEAD
 import joblib
 import numpy as np
 import pandas as pd
@@ -21,16 +20,6 @@ from stevia_bot.intent_text import normalize_intent_text
 
 
 MODEL_NAME = "multilingual-character-word-tfidf-sgd"
-=======
-import numpy as np
-import pandas as pd
-import torch
-from torch.utils.data import DataLoader, TensorDataset
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-
-
-MODEL_NAME = "bert-base-uncased"
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 EXPECTED_COLUMNS = {"text", "intent"}
 
 
@@ -116,39 +105,6 @@ def split_indices(
     return splits
 
 
-<<<<<<< HEAD
-=======
-def make_dataset(texts: list[str], labels: list[int], tokenizer) -> TensorDataset:
-    encoded = tokenizer(
-        texts,
-        padding=True,
-        truncation=True,
-        max_length=64,
-        return_tensors="pt",
-    )
-    return TensorDataset(
-        encoded["input_ids"],
-        encoded["attention_mask"],
-        torch.tensor(labels, dtype=torch.long),
-    )
-
-
-def collect_logits(model, loader: DataLoader, device: torch.device) -> tuple[torch.Tensor, torch.Tensor]:
-    model.eval()
-    logits = []
-    labels = []
-    with torch.no_grad():
-        for input_ids, attention_mask, batch_labels in loader:
-            outputs = model(
-                input_ids=input_ids.to(device),
-                attention_mask=attention_mask.to(device),
-            )
-            logits.append(outputs.logits.cpu())
-            labels.append(batch_labels)
-    return torch.cat(logits), torch.cat(labels)
-
-
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 def classification_metrics(
     logits: torch.Tensor,
     labels: torch.Tensor,
@@ -163,7 +119,6 @@ def classification_metrics(
         confusion[actual, predicted] += 1
 
     true_positives = np.diag(confusion).astype(float)
-<<<<<<< HEAD
     precision = np.divide(
         true_positives,
         confusion.sum(axis=0),
@@ -182,11 +137,6 @@ def classification_metrics(
         out=np.zeros_like(precision),
         where=(precision + recall) != 0,
     )
-=======
-    precision = np.divide(true_positives, confusion.sum(axis=0), out=np.zeros_like(true_positives), where=confusion.sum(axis=0) != 0)
-    recall = np.divide(true_positives, confusion.sum(axis=1), out=np.zeros_like(true_positives), where=confusion.sum(axis=1) != 0)
-    f1 = np.divide(2 * precision * recall, precision + recall, out=np.zeros_like(precision), where=(precision + recall) != 0)
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 
     return {
         "loss": loss,
@@ -222,19 +172,13 @@ def fit_temperature(logits: torch.Tensor, labels: torch.Tensor) -> float:
 def _routing_predictions(
     frame: pd.DataFrame,
     indices: list[int],
-<<<<<<< HEAD
     model: Pipeline,
-=======
-    model,
-    tokenizer,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     chatbot,
     confidence_threshold: float,
 ) -> tuple[list[str], list[str]]:
     from stevia_bot.knowledge_base import KNOWLEDGE_BASE
 
     questions = frame.iloc[indices]["text"].tolist()
-<<<<<<< HEAD
     probabilities = model.predict_proba(questions)
     temperature = max(float(getattr(model, "confidence_temperature", 1.0)), 1e-6)
     log_probabilities = np.log(np.clip(probabilities, 1e-12, 1.0)) / temperature
@@ -242,36 +186,21 @@ def _routing_predictions(
     probabilities = np.exp(log_probabilities)
     probabilities /= probabilities.sum(axis=1, keepdims=True)
     class_names = model.classes_
-=======
-    encoded = tokenizer(
-        questions,
-        truncation=True,
-        max_length=64,
-        padding=True,
-        return_tensors="pt",
-    )
-    model.eval()
-    device = next(model.parameters()).device
-    encoded = {name: tensor.to(device) for name, tensor in encoded.items()}
-    with torch.no_grad():
-        logits = model(**encoded).logits
-        temperature = max(float(getattr(model.config, "confidence_temperature", 1.0)), 1e-6)
-        probabilities = torch.softmax(logits / temperature, dim=-1)
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 
     predictions = []
     truths = frame.iloc[indices]["intent"].tolist()
     for question, probabilities_row in zip(questions, probabilities):
+        normalized_question = chatbot._normalize_tagalog_question(question)
+        if chatbot._device_command(normalized_question):
+            predictions.append("device_control")
+            continue
+
         if chatbot._asks_for_sensor_records(question):
             predictions.append("sensor_records")
             continue
 
         scores = {
-<<<<<<< HEAD
             str(class_names[index]): float(probability)
-=======
-            model.config.id2label[index]: float(probability)
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
             for index, probability in enumerate(probabilities_row)
         }
         model_intent = max(scores, key=scores.get)
@@ -302,12 +231,7 @@ def _routing_predictions(
 def fit_intent_confidence_threshold(
     frame: pd.DataFrame,
     validation_indices: list[int],
-<<<<<<< HEAD
     model: Pipeline,
-=======
-    model,
-    tokenizer,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 ) -> float:
     from stevia_bot.chatbot import SteviaChatbot
 
@@ -316,17 +240,11 @@ def fit_intent_confidence_threshold(
     best_accuracy = -1.0
     for threshold in np.linspace(0.0, 1.0, 101):
         truths, predictions = _routing_predictions(
-<<<<<<< HEAD
             frame, validation_indices, model, chatbot, float(threshold)
         )
         accuracy = sum(
             actual == predicted for actual, predicted in zip(truths, predictions)
         ) / len(truths)
-=======
-            frame, validation_indices, model, tokenizer, chatbot, float(threshold)
-        )
-        accuracy = sum(actual == predicted for actual, predicted in zip(truths, predictions)) / len(truths)
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
         if accuracy > best_accuracy or (
             accuracy == best_accuracy and threshold > best_threshold
         ):
@@ -338,53 +256,33 @@ def fit_intent_confidence_threshold(
 def evaluate_chatbot_routing(
     frame: pd.DataFrame,
     test_indices: list[int],
-<<<<<<< HEAD
     model: Pipeline,
-=======
-    model,
-    tokenizer,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     class_names: list[str],
 ) -> dict:
     from stevia_bot.chatbot import SteviaChatbot
 
     chatbot = SteviaChatbot()
     chatbot.model = model
-<<<<<<< HEAD
-=======
-    chatbot.tokenizer = tokenizer
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     chatbot._model_loaded = True
     label_to_id = {label: index for index, label in enumerate(class_names)}
     truths, routed_intents = _routing_predictions(
         frame,
         test_indices,
         model,
-<<<<<<< HEAD
         chatbot,
         float(getattr(model, "intent_confidence_threshold", 1.0)),
-=======
-        tokenizer,
-        chatbot,
-        float(getattr(model.config, "intent_confidence_threshold", 1.0)),
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     )
     labels = [label_to_id[label] for label in truths]
     predictions = [
         label_to_id.get(intent, label_to_id.get("general", 0))
         for intent in routed_intents
     ]
-<<<<<<< HEAD
-=======
-
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     one_hot_logits = torch.full((len(labels), len(class_names)), -1.0)
     for index, prediction in enumerate(predictions):
         one_hot_logits[index, prediction] = 1.0
     return classification_metrics(one_hot_logits, torch.tensor(labels), class_names)
 
 
-<<<<<<< HEAD
 def evaluate_multilingual_smoke_tests(model: Pipeline) -> dict:
     from stevia_bot.chatbot import SteviaChatbot
 
@@ -409,6 +307,12 @@ def evaluate_multilingual_smoke_tests(model: Pipeline) -> dict:
         ("Tagalog", "Kailan dapat lagyan ng pataba ang stevia?", "fertilization"),
         ("Tagalog", "Bakit naninilaw ang dahon ng stevia?", "problems"),
         ("Tagalog", "Ipakita ang pinakabagong sensor records.", "sensor_records"),
+        ("Tagalog", "Buksan ang bentilador.", "device_control"),
+        ("Tagalog", "Patayin ang mga ilaw.", "device_control"),
+        ("Tagalog", "Paandarin ang pandilig.", "device_control"),
+        ("Tagalog", "I-off ang fan.", "device_control"),
+        ("Tagalog", "Ihinto ang bomba ng tubig.", "device_control"),
+        ("Tagalog", "Sindihan ang ilaw sa halaman.", "device_control"),
         ("Taglish", "Ano ba yung stevia, plant ba siya?", "general"),
         ("Taglish", "Paano ko i-grow yung stevia sa pot?", "growing"),
         ("Taglish", "Gaano kadalas mag-water ng stevia, bes?", "watering"),
@@ -419,6 +323,18 @@ def evaluate_multilingual_smoke_tests(model: Pipeline) -> dict:
         ("Taglish", "Kailan best mag-fertilize, bes?", "fertilization"),
         ("Taglish", "Bakit yellow na yung leaves ng stevia ko?", "problems"),
         ("Taglish", "Pakita latest sensor records, pls.", "sensor_records"),
+        ("Taglish", "Paki-open yung fan ngayon.", "device_control"),
+        ("Taglish", "I-off mo yung grow lights.", "device_control"),
+        ("Taglish", "Turn on natin yung sprinkler.", "device_control"),
+        ("Taglish", "Stop mo yung water pump.", "device_control"),
+        ("Taglish", "Switch on mo yung ilaw.", "device_control"),
+        ("Taglish", "Deactivate mo yung fan, please.", "device_control"),
+        ("English", "Please activate the fan.", "device_control"),
+        ("English", "Turn off the grow lights.", "device_control"),
+        ("English", "Start the sprinkler.", "device_control"),
+        ("English", "Switch the water pump off.", "device_control"),
+        ("English", "Open the greenhouse light.", "device_control"),
+        ("English", "Stop the fan.", "device_control"),
     ]
     texts = [text for _, text, _ in examples]
     expected = [intent for _, _, intent in examples]
@@ -452,6 +368,10 @@ def evaluate_multilingual_smoke_tests(model: Pipeline) -> dict:
             ])),
         }
 
+    device_indices = [
+        index for index, (_, _, intent) in enumerate(examples)
+        if intent == "device_control"
+    ]
     return {
         "per_language": per_language,
         "classifier_accuracy": float(np.mean([
@@ -460,6 +380,15 @@ def evaluate_multilingual_smoke_tests(model: Pipeline) -> dict:
         "routed_accuracy": float(np.mean([
             predicted == actual for predicted, actual in zip(routed_predictions, expected)
         ])),
+        "device_control": {
+            "support": len(device_indices),
+            "classifier_accuracy": float(np.mean([
+                predictions[index] == expected[index] for index in device_indices
+            ])),
+            "routed_accuracy": float(np.mean([
+                routed_predictions[index] == expected[index] for index in device_indices
+            ])),
+        },
         "cases": [
             {
                 "language": language,
@@ -492,17 +421,6 @@ def main() -> None:
     parser.add_argument("--learning-rate", type=float, default=0.05)
     parser.add_argument("--alpha", type=float, default=1e-5)
     parser.add_argument("--patience", type=int, default=5)
-=======
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Fine-tune and evaluate the Stevia intent classifier.")
-    parser.add_argument("--data", type=Path, default=Path("intent_training_data.csv"))
-    parser.add_argument("--output-dir", type=Path, default=Path("models/stevia-intent-bert"))
-    parser.add_argument("--epochs", type=int, default=8)
-    parser.add_argument("--batch-size", type=int, default=8)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--learning-rate", type=float, default=2e-5)
-    parser.add_argument("--patience", type=int, default=2)
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     args = parser.parse_args()
 
     if args.batch_size < 1:
@@ -511,17 +429,13 @@ def main() -> None:
         raise ValueError("Epoch count must be a positive integer.")
     if args.learning_rate <= 0:
         raise ValueError("Learning rate must be positive.")
-<<<<<<< HEAD
     if args.alpha <= 0:
         raise ValueError("Regularization alpha must be positive.")
-=======
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     if args.patience < 1:
         raise ValueError("Early-stopping patience must be positive.")
 
     random.seed(args.seed)
     np.random.seed(args.seed)
-<<<<<<< HEAD
     baseline_report_path = args.baseline_report
     if (
         not baseline_report_path.is_file()
@@ -531,10 +445,6 @@ def main() -> None:
     baseline = None
     if baseline_report_path.is_file():
         baseline = json.loads(baseline_report_path.read_text(encoding="utf-8"))
-=======
-    torch.manual_seed(args.seed)
-    torch.set_num_threads(min(4, os.cpu_count() or 1))
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 
     frame = pd.read_csv(args.data)
     if not EXPECTED_COLUMNS.issubset(frame.columns):
@@ -548,19 +458,8 @@ def main() -> None:
 
     class_names = sorted(frame["intent"].unique().tolist())
     label_to_id = {name: index for index, name in enumerate(class_names)}
-<<<<<<< HEAD
     splits = split_indices(frame["text"].tolist(), frame["intent"].tolist(), args.seed)
     args.output_dir.mkdir(parents=True, exist_ok=True)
-=======
-    labels = [label_to_id[name] for name in frame["intent"].tolist()]
-    splits = split_indices(
-        frame["text"].tolist(),
-        frame["intent"].tolist(),
-        args.seed,
-    )
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     split_manifest = {
         split_name: [int(index) for index in indices]
         for split_name, indices in splits.items()
@@ -569,7 +468,6 @@ def main() -> None:
         json.dumps(split_manifest, indent=2), encoding="utf-8"
     )
 
-<<<<<<< HEAD
     vectorizer = FeatureUnion(
         [
             ("char", TfidfVectorizer(
@@ -664,69 +562,6 @@ def main() -> None:
         )
         print(
             f"Epoch {epoch:02d}/{args.epochs} "
-=======
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    model = AutoModelForSequenceClassification.from_pretrained(
-        MODEL_NAME,
-        num_labels=len(class_names),
-        id2label={index: name for name, index in label_to_id.items()},
-        label2id=label_to_id,
-    )
-
-    datasets = {
-        split_name: make_dataset(
-            frame.iloc[indices]["text"].tolist(),
-            [labels[index] for index in indices],
-            tokenizer,
-        )
-        for split_name, indices in splits.items()
-    }
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
-    train_loader = DataLoader(datasets["train"], batch_size=args.batch_size, shuffle=True)
-    validation_loader = DataLoader(datasets["validation"], batch_size=args.batch_size)
-    test_loader = DataLoader(datasets["test"], batch_size=args.batch_size)
-
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
-    best_validation_loss = float("inf")
-    best_epoch = 0
-    epochs_without_improvement = 0
-
-    print(
-        f"Device: {device}; batch size: {args.batch_size}; maximum epochs: {args.epochs}; "
-        f"learning rate: {args.learning_rate}; early-stopping patience: {args.patience}",
-        flush=True,
-    )
-    print(f"TTV sizes: {len(datasets['train'])}/{len(datasets['validation'])}/{len(datasets['test'])}", flush=True)
-    for epoch in range(1, args.epochs + 1):
-        model.train()
-        total_loss = 0.0
-        total_examples = 0
-        for input_ids, attention_mask, batch_labels in train_loader:
-            input_ids = input_ids.to(device)
-            attention_mask = attention_mask.to(device)
-            batch_labels = batch_labels.to(device)
-            optimizer.zero_grad(set_to_none=True)
-            outputs = model(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                labels=batch_labels,
-            )
-            loss = outputs.loss
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
-            batch_size = batch_labels.size(0)
-            total_loss += loss.item() * batch_size
-            total_examples += batch_size
-
-        validation_logits, validation_labels = collect_logits(model, validation_loader, device)
-        validation = classification_metrics(validation_logits, validation_labels, class_names)
-        train_loss = total_loss / max(total_examples, 1)
-        print(
-            f"Epoch {epoch:02d}/{args.epochs} "
-            f"train_loss={train_loss:.4f} "
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
             f"validation_loss={validation['loss']:.4f} "
             f"validation_macro_f1={validation['macro_f1']:.4f}",
             flush=True,
@@ -735,19 +570,13 @@ def main() -> None:
             best_validation_loss = validation["loss"]
             best_epoch = epoch
             epochs_without_improvement = 0
-<<<<<<< HEAD
             joblib.dump(model, args.output_dir / "intent_classifier.joblib", compress=3)
-=======
-            model.save_pretrained(args.output_dir)
-            tokenizer.save_pretrained(args.output_dir)
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
         else:
             epochs_without_improvement += 1
             if epochs_without_improvement >= args.patience:
                 print(f"Early stopping after epoch {epoch}.", flush=True)
                 break
 
-<<<<<<< HEAD
     best_model = joblib.load(args.output_dir / "intent_classifier.joblib")
     validation_probabilities = best_model.named_steps["classifier"].predict_proba(
         features["validation"]
@@ -757,17 +586,10 @@ def main() -> None:
     )
     confidence_temperature = fit_temperature(validation_logits, validation_labels)
     best_model.confidence_temperature = confidence_temperature
-=======
-    best_model = AutoModelForSequenceClassification.from_pretrained(args.output_dir).to(device)
-    validation_logits, validation_labels = collect_logits(best_model, validation_loader, device)
-    confidence_temperature = fit_temperature(validation_logits, validation_labels)
-    best_model.config.confidence_temperature = confidence_temperature
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     intent_confidence_threshold = fit_intent_confidence_threshold(
         frame,
         splits["validation"],
         best_model,
-<<<<<<< HEAD
     )
     best_model.intent_confidence_threshold = intent_confidence_threshold
     joblib.dump(best_model, args.output_dir / "intent_classifier.joblib", compress=3)
@@ -780,15 +602,6 @@ def main() -> None:
     test_logits = torch.from_numpy(
         np.log(np.clip(test_probabilities, 1e-12, 1.0)).astype(np.float32)
     )
-=======
-        tokenizer,
-    )
-    best_model.config.intent_confidence_threshold = intent_confidence_threshold
-    best_model.save_pretrained(args.output_dir)
-    tokenizer.save_pretrained(args.output_dir)
-
-    test_logits, test_labels = collect_logits(best_model, test_loader, device)
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     test_metrics = classification_metrics(
         test_logits,
         test_labels,
@@ -800,7 +613,6 @@ def main() -> None:
         test_labels,
         class_names,
     )["accuracy"]
-<<<<<<< HEAD
     test_metrics["classification_report"] = classification_report(
         test_labels.numpy(),
         (test_logits / confidence_temperature).argmax(dim=1).numpy(),
@@ -809,13 +621,10 @@ def main() -> None:
         output_dict=True,
         zero_division=0,
     )
-=======
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     chatbot_routing_metrics = evaluate_chatbot_routing(
         frame,
         splits["test"],
         best_model,
-<<<<<<< HEAD
         class_names,
     )
     multilingual_smoke_tests = evaluate_multilingual_smoke_tests(best_model)
@@ -881,17 +690,11 @@ def main() -> None:
     (args.output_dir / "model_config.json").write_text(
         json.dumps(model_config, indent=2), encoding="utf-8"
     )
-=======
-        tokenizer,
-        class_names,
-    )
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     report = {
         "model_name": MODEL_NAME,
         "epochs_completed": epoch,
         "batch_size": args.batch_size,
         "learning_rate": args.learning_rate,
-<<<<<<< HEAD
         "alpha": args.alpha,
         "early_stopping_patience": args.patience,
         "training_method": (
@@ -904,22 +707,21 @@ def main() -> None:
             "torch_cuda_available": torch.cuda.is_available(),
             "cpu_threads": min(4, os.cpu_count() or 1),
         },
-=======
-        "early_stopping_patience": args.patience,
-        "training_method": "full BERT fine-tuning with validation-loss early stopping",
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
         "seed": args.seed,
         "best_epoch_by_validation_loss": best_epoch,
         "best_validation_loss": best_validation_loss,
         "confidence_temperature": confidence_temperature,
         "intent_confidence_threshold": intent_confidence_threshold,
-<<<<<<< HEAD
         "split_method": (
             "stratified by intent and grouped by same-intent text similarity "
             "(threshold 0.82)"
         ),
         "split_sizes": {name: len(indices) for name, indices in splits.items()},
         "class_counts": frame["intent"].value_counts().sort_index().to_dict(),
+        "intent_split_counts": {
+            split_name: frame.iloc[indices]["intent"].value_counts().sort_index().to_dict()
+            for split_name, indices in splits.items()
+        },
         "vocabulary_size": vocabulary_size,
         "test_metrics": test_metrics,
         "chatbot_routing_test_metrics": chatbot_routing_metrics,
@@ -935,42 +737,19 @@ def main() -> None:
     (args.output_dir / "evaluation.json").write_text(
         json.dumps(report, indent=2), encoding="utf-8"
     )
-=======
-        "split_method": "stratified by intent and grouped by same-intent text similarity (threshold 0.82)",
-        "split_sizes": {name: len(indices) for name, indices in splits.items()},
-        "class_counts": frame["intent"].value_counts().sort_index().to_dict(),
-        "test_metrics": test_metrics,
-        "chatbot_routing_test_metrics": chatbot_routing_metrics,
-        "note": (
-            "Training phrases are synthetic. Held-out test scores are not estimates of real-world "
-            "performance; validate against independently collected user conversations before deployment."
-        ),
-    }
-    (args.output_dir / "evaluation.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     print("Held-out test metrics:", json.dumps(test_metrics, indent=2), flush=True)
     print(
         "Chatbot routing test metrics:",
         json.dumps(chatbot_routing_metrics, indent=2),
         flush=True,
     )
-<<<<<<< HEAD
     print("Multilingual smoke tests:", json.dumps(multilingual_smoke_tests, indent=2), flush=True)
     print(
         f"Best validation epoch: {best_epoch}; confidence temperature: "
         f"{confidence_temperature:.3f}; saved model and report to {args.output_dir}",
-=======
-    print(
-        f"Best validation epoch: {best_epoch}; confidence temperature: {confidence_temperature:.3f}; "
-        f"saved model and report to {args.output_dir}",
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
         flush=True,
     )
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
     main()
-=======
-    main()
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6

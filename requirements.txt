@@ -7,7 +7,4 @@ openpyxl>=3.1.5
 openai>=1.40.0
 pandas>=2.2.0
 numpy>=2.0.0
-<<<<<<< HEAD
 scikit-learn>=1.5,<2
-=======
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6

@@ -31,4 +31,8 @@ h1 { font-size: clamp(42px, 5vw, 68px); } h1 em { color: #d5e8c9; font-weight: 6
 .sensor-records-table caption { padding: 8px; color: var(--muted); text-align: left; font-weight: 700; }
 .sensor-records-table th, .sensor-records-table td { padding: 8px 10px; border: 1px solid var(--line); text-align: left; }
 .sensor-records-table th { background: var(--mint); color: var(--ink); }
+.device-confirmation { display: flex; gap: 8px; margin-top: 12px; }
+.device-confirmation button { padding: 8px 16px; border: 1px solid #cbdacf; border-radius: 18px; background: white; color: var(--green); cursor: pointer; font: 500 12px 'DM Sans', sans-serif; }
+.device-confirmation button:first-child { border-color: var(--green); background: var(--green); color: white; }
+.device-confirmation button:disabled { cursor: default; opacity: .6; }
 @media (max-width: 700px) { .sensor-records-table-wrap { max-width: 100%; } }

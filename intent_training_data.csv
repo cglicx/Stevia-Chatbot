@@ -382,7 +382,6 @@ Has my plant recovered from the earlier alert?,problems
 "Can you provide the records of my Stevia?",sensor_records
 "I'd like to see all historical readings for my Stevia plant.",sensor_records
 "Retrieve my plant's sensor log and recorded measurements.",sensor_records
-<<<<<<< HEAD
 "What readings have been recorded over time for my Stevia?",sensor_records
 "Ano ba ang Stevia, plant ba siya?",general
 "Ano yung Stevia, natural sweetener ba siya?",general
@@ -1200,6 +1199,154 @@ Has my plant recovered from the earlier alert?,problems
 "List yung recorded conditions ng Stevia.",sensor_records
 "Paki-display yung historical plant readings.",sensor_records
 "Gusto ko makita sensor history from earlier.",sensor_records
-=======
-"What readings have been recorded over time for my Stevia?",sensor_records
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
+"Buksan ang bentilador.",device_control
+"I-on ang bentilador.",device_control
+"Paandarin ang fan.",device_control
+"Buksan ang ilaw.",device_control
+"Sindihan ang mga ilaw.",device_control
+"Paandarin ang bomba.",device_control
+"Buksan ang pandilig.",device_control
+"I-off ang bentilador.",device_control
+"Patayin ang fan.",device_control
+"Isara ang ilaw.",device_control
+"Patayin ang mga ilaw.",device_control
+"Ihinto ang bomba.",device_control
+"Patayin ang pandilig.",device_control
+"Paki-open yung fan.",device_control
+"I-on mo yung fan.",device_control
+"Paandarin mo yung sprinkler.",device_control
+"Paki-on yung lights.",device_control
+"Turn on mo yung fan.",device_control
+"Paki-start yung pump.",device_control
+"Buksan yung lights.",device_control
+"Paki-off yung fan.",device_control
+"I-off mo yung lights.",device_control
+"Patayin mo yung pump.",device_control
+"I-close yung sprinkler.",device_control
+"Stop mo yung fan.",device_control
+"Turn off natin yung bomba.",device_control
+"Buksan mo ang bentilador ngayon.",device_control
+"Paandarin mo ang fan sa loob.",device_control
+"Paki-on ang bentilador para umandar.",device_control
+"I-on mo ang electric fan.",device_control
+"Sindihan mo ang ilaw sa taniman.",device_control
+"Buksan ang mga ilaw sa grow area.",device_control
+"I-on ang ilaw para sa halaman.",device_control
+"Paandarin ang bomba ng tubig.",device_control
+"Paandarin ang sprinkler ngayon.",device_control
+"Buksan ang pandilig sa hardin.",device_control
+"Paki-on mo ang sprinkler.",device_control
+"Pwede bang buksan ang fan?",device_control
+"Maaari bang paandarin ang bentilador?",device_control
+"Gusto kong buksan ang ilaw.",device_control
+"Gusto ko i-on ang fan.",device_control
+"Buksan muna ang fan.",device_control
+"I-on natin ang ilaw.",device_control
+"Paandarin natin ang bentilador.",device_control
+"Buksan ninyo ang sprinkler.",device_control
+"Sindihan ang ilaw sa loob ng bahay.",device_control
+"Paandarin ang bomba ng pandilig.",device_control
+"I-on ang sprinkler para madiligan ang halaman.",device_control
+"Buksan ang fan sa greenhouse.",device_control
+"Patayin mo ang bentilador ngayon.",device_control
+"I-off mo ang electric fan.",device_control
+"Isara ang fan sa loob.",device_control
+"Ihinto ang bentilador kapag gabi na.",device_control
+"Patayin ang ilaw sa taniman.",device_control
+"I-off ang mga ilaw sa grow area.",device_control
+"Isara ang ilaw para sa halaman.",device_control
+"Ihinto ang bomba ng tubig.",device_control
+"Patayin ang sprinkler ngayon.",device_control
+"Isara ang pandilig sa hardin.",device_control
+"Paki-off mo ang sprinkler.",device_control
+"Pwede bang patayin ang fan?",device_control
+"Maaari bang ihinto ang bentilador?",device_control
+"Gusto kong patayin ang ilaw.",device_control
+"Gusto ko i-off ang fan.",device_control
+"Patayin muna ang fan.",device_control
+"I-off natin ang ilaw.",device_control
+"Ihinto natin ang bentilador.",device_control
+"Patayin ninyo ang sprinkler.",device_control
+"Isara ang ilaw sa loob ng bahay.",device_control
+"Ihinto ang bomba ng pandilig.",device_control
+"I-off ang sprinkler pagkatapos gamitin.",device_control
+"Patayin ang fan sa greenhouse.",device_control
+"Paki-open yung fan ngayon.",device_control
+"Buksan mo yung grow lights, please.",device_control
+"Can you turn on yung fan?",device_control
+"Turn on na yung electric fan.",device_control
+"Switch on mo yung ilaw.",device_control
+"Paki-activate yung lights sa plant area.",device_control
+"Start mo yung sprinkler para sa halaman.",device_control
+"I-on yung fan sa greenhouse.",device_control
+"Paki-start yung water pump.",device_control
+"Could you open yung sprinkler, please?",device_control
+"Gusto ko i-on yung grow light.",device_control
+"Paandarin mo yung fan sa room.",device_control
+"Paki-buksan yung ilaw sa garden.",device_control
+"Turn on natin yung plant lights.",device_control
+"Can you start yung pump ngayon?",device_control
+"I-on mo yung sprinkler sa labas.",device_control
+"Paki-open yung lights sa greenhouse.",device_control
+"Activate mo yung fan, please.",device_control
+"Start natin yung irrigation pump.",device_control
+"Buksan mo yung light para sa Stevia.",device_control
+"Switch the fan on na, please.",device_control
+"Paki-on yung ilaw sa halaman.",device_control
+"Could you activate yung sprinkler?",device_control
+"Turn on mo yung grow lamp.",device_control
+"Paandarin yung pump kapag ready na.",device_control
+"Paki-on natin yung fan.",device_control
+"Open mo yung lights sa loob.",device_control
+"I-on please yung sprinkler.",device_control
+"Start mo yung bentilador sa nursery.",device_control
+"Paki-activate yung pump ng tubig.",device_control
+"Buksan natin yung ilaw sa grow tent.",device_control
+"Can you switch on yung fan sa room?",device_control
+"Paki-start yung sprinkler system.",device_control
+"I-on mo yung ilaw ngayon, please.",device_control
+"Could you turn on the fan na?",device_control
+"Open natin yung plant light.",device_control
+"Paandarin yung fan sa greenhouse.",device_control
+"Start the pump na, paki.",device_control
+"I-on natin yung sprinkler para madiligan.",device_control
+"Paki-open yung ilaw sa garden.",device_control
+"Turn off mo yung fan ngayon.",device_control
+"Patayin mo yung grow lights, please.",device_control
+"Can you switch off yung fan?",device_control
+"Switch off na yung electric fan.",device_control
+"I-off mo yung ilaw sa plant area.",device_control
+"Paki-deactivate yung lights sa garden.",device_control
+"Stop mo yung sprinkler kapag tapos na.",device_control
+"I-off yung fan sa greenhouse.",device_control
+"Paki-stop yung water pump.",device_control
+"Could you close yung sprinkler, please?",device_control
+"Gusto ko i-off yung grow light.",device_control
+"Patayin mo yung fan sa room.",device_control
+"Paki-isara yung ilaw sa garden.",device_control
+"Turn off natin yung plant lights.",device_control
+"Can you stop yung pump ngayon?",device_control
+"I-off mo yung sprinkler sa labas.",device_control
+"Paki-close yung lights sa greenhouse.",device_control
+"Deactivate mo yung fan, please.",device_control
+"Stop natin yung irrigation pump.",device_control
+"Isara mo yung light para sa Stevia.",device_control
+"Switch the fan off na, please.",device_control
+"Paki-off yung ilaw sa halaman.",device_control
+"Could you deactivate yung sprinkler?",device_control
+"Turn off mo yung grow lamp.",device_control
+"Ihinto yung pump kapag ready na.",device_control
+"Paki-off natin yung fan.",device_control
+"Close mo yung lights sa loob.",device_control
+"I-off please yung sprinkler.",device_control
+"Stop mo yung bentilador sa nursery.",device_control
+"Paki-stop yung pump ng tubig.",device_control
+"Isara natin yung ilaw sa grow tent.",device_control
+"Can you switch off yung fan sa room?",device_control
+"Paki-stop yung sprinkler system.",device_control
+"I-off mo yung ilaw ngayon, please.",device_control
+"Could you turn off the fan na?",device_control
+"Close natin yung plant light.",device_control
+"Ihinto yung fan sa greenhouse.",device_control
+"Stop the pump na, paki.",device_control
+"I-off natin yung sprinkler pagkatapos gamitin.",device_control

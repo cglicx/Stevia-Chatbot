@@ -1,11 +1,10 @@
 {
-<<<<<<< HEAD
   "model_name": "multilingual-character-word-tfidf-sgd",
   "epochs_completed": 50,
-  "batch_size": 32,
+  "batch_size": 16,
   "learning_rate": 0.05,
   "alpha": 1e-05,
-  "early_stopping_patience": 5,
+  "early_stopping_patience": 7,
   "training_method": "Multilingual character and word n-gram TF-IDF with Tagalog/Taglish feature normalization and minibatch SGD logistic regression; best validation-loss checkpoint and early stopping",
   "training_device": {
     "device": "CPU",
@@ -14,16 +13,17 @@
   },
   "seed": 42,
   "best_epoch_by_validation_loss": 50,
-  "best_validation_loss": 1.0042979717254639,
-  "confidence_temperature": 0.4363550841808319,
-  "intent_confidence_threshold": 0.66,
+  "best_validation_loss": 0.8731524348258972,
+  "confidence_temperature": 0.35343560576438904,
+  "intent_confidence_threshold": 0.67,
   "split_method": "stratified by intent and grouped by same-intent text similarity (threshold 0.82)",
   "split_sizes": {
-    "train": 834,
-    "validation": 183,
-    "test": 183
+    "train": 939,
+    "validation": 206,
+    "test": 206
   },
   "class_counts": {
+    "device_control": 151,
     "fertilization": 124,
     "general": 126,
     "growing": 126,
@@ -35,127 +35,107 @@
     "temperature": 124,
     "watering": 126
   },
-  "vocabulary_size": 12374,
+  "intent_split_counts": {
+    "train": {
+      "device_control": 105,
+      "fertilization": 86,
+      "general": 88,
+      "growing": 88,
+      "humidity": 86,
+      "problems": 86,
+      "sensor_records": 54,
+      "soil": 86,
+      "sunlight": 86,
+      "temperature": 86,
+      "watering": 88
+    },
+    "validation": {
+      "device_control": 23,
+      "fertilization": 19,
+      "general": 19,
+      "growing": 19,
+      "humidity": 19,
+      "problems": 19,
+      "sensor_records": 12,
+      "soil": 19,
+      "sunlight": 19,
+      "temperature": 19,
+      "watering": 19
+    },
+    "test": {
+      "device_control": 23,
+      "fertilization": 19,
+      "general": 19,
+      "growing": 19,
+      "humidity": 19,
+      "problems": 19,
+      "sensor_records": 12,
+      "soil": 19,
+      "sunlight": 19,
+      "temperature": 19,
+      "watering": 19
+    }
+  },
+  "vocabulary_size": 12575,
   "test_metrics": {
-    "loss": 0.5872378945350647,
-    "accuracy": 0.825136612021858,
-    "macro_precision": 0.8423193400167085,
-    "macro_recall": 0.8315789473684211,
-    "macro_f1": 0.8323306511617405,
+    "loss": 0.6051605343818665,
+    "accuracy": 0.8592233009708737,
+    "macro_precision": 0.8619579251158197,
+    "macro_recall": 0.8584529505582136,
+    "macro_f1": 0.8564273536685504,
     "per_intent": {
+      "device_control": {
+        "precision": 0.9583333333333334,
+        "recall": 1.0,
+        "f1": 0.9787234042553191,
+        "support": 23
+      },
       "fertilization": {
-        "precision": 1.0,
-        "recall": 0.8947368421052632,
-        "f1": 0.9444444444444444,
+        "precision": 0.9,
+        "recall": 0.9473684210526315,
+        "f1": 0.9230769230769231,
         "support": 19
       },
       "general": {
-        "precision": 0.8095238095238095,
-        "recall": 0.8947368421052632,
-        "f1": 0.8500000000000001,
-        "support": 19
-      },
-      "growing": {
-        "precision": 0.7083333333333334,
-        "recall": 0.8947368421052632,
-        "f1": 0.7906976744186046,
-        "support": 19
-      },
-      "humidity": {
-        "precision": 0.8888888888888888,
+        "precision": 0.7619047619047619,
         "recall": 0.8421052631578947,
-        "f1": 0.8648648648648649,
+        "f1": 0.8,
         "support": 19
-      },
-      "problems": {
-        "precision": 0.5789473684210527,
-        "recall": 0.5789473684210527,
-        "f1": 0.5789473684210527,
-        "support": 19
-=======
-  "model_name": "bert-base-uncased",
-  "epochs_completed": 8,
-  "batch_size": 8,
-  "learning_rate": 2e-05,
-  "early_stopping_patience": 2,
-  "training_method": "full BERT fine-tuning with validation-loss early stopping",
-  "seed": 42,
-  "best_epoch_by_validation_loss": 8,
-  "best_validation_loss": 0.11796769499778748,
-  "confidence_temperature": 0.7390339970588684,
-  "split_method": "stratified by intent and grouped by same-intent text similarity (threshold 0.82)",
-  "split_sizes": {
-    "train": 268,
-    "validation": 58,
-    "test": 58
-  },
-  "class_counts": {
-    "fertilization": 40,
-    "general": 40,
-    "growing": 40,
-    "humidity": 40,
-    "problems": 40,
-    "sensor_records": 24,
-    "soil": 40,
-    "sunlight": 40,
-    "temperature": 40,
-    "watering": 40
-  },
-  "test_metrics": {
-    "loss": 0.4316396713256836,
-    "accuracy": 0.896551724137931,
-    "macro_precision": 0.8957142857142857,
-    "macro_recall": 0.9,
-    "macro_f1": 0.8925674325674325,
-    "per_intent": {
-      "fertilization": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "support": 6
-      },
-      "general": {
-        "precision": 0.75,
-        "recall": 0.5,
-        "f1": 0.6,
-        "support": 6
       },
       "growing": {
-        "precision": 0.75,
-        "recall": 1.0,
-        "f1": 0.8571428571428571,
-        "support": 6
+        "precision": 0.6666666666666666,
+        "recall": 0.8421052631578947,
+        "f1": 0.744186046511628,
+        "support": 19
       },
       "humidity": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "support": 6
+        "precision": 0.9473684210526315,
+        "recall": 0.9473684210526315,
+        "f1": 0.9473684210526315,
+        "support": 19
       },
       "problems": {
-        "precision": 0.6,
-        "recall": 0.5,
-        "f1": 0.5454545454545454,
-        "support": 6
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
+        "precision": 0.8,
+        "recall": 0.631578947368421,
+        "f1": 0.7058823529411765,
+        "support": 19
       },
       "sensor_records": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-<<<<<<< HEAD
+        "precision": 0.7857142857142857,
+        "recall": 0.9166666666666666,
+        "f1": 0.8461538461538461,
         "support": 12
       },
       "soil": {
-        "precision": 1.0,
-        "recall": 0.8421052631578947,
-        "f1": 0.9142857142857143,
+        "precision": 0.9444444444444444,
+        "recall": 0.8947368421052632,
+        "f1": 0.918918918918919,
         "support": 19
       },
       "sunlight": {
-        "precision": 0.75,
-        "recall": 0.631578947368421,
-        "f1": 0.6857142857142857,
+        "precision": 0.8421052631578947,
+        "recall": 0.8421052631578947,
+        "f1": 0.8421052631578947,
         "support": 19
       },
       "temperature": {
@@ -165,48 +145,17 @@
         "support": 19
       },
       "watering": {
-        "precision": 0.75,
-        "recall": 0.9473684210526315,
-        "f1": 0.8372093023255814,
+        "precision": 0.9375,
+        "recall": 0.7894736842105263,
+        "f1": 0.8571428571428572,
         "support": 19
-=======
-        "support": 4
-      },
-      "soil": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "support": 6
-      },
-      "sunlight": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "support": 6
-      },
-      "temperature": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "support": 6
-      },
-      "watering": {
-        "precision": 0.8571428571428571,
-        "recall": 1.0,
-        "f1": 0.923076923076923,
-        "support": 6
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
       }
     },
     "confusion_matrix": [
       [
-<<<<<<< HEAD
-        17,
-        2,
-=======
-        6,
+        23,
         0,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
+        0,
         0,
         0,
         0,
@@ -218,62 +167,79 @@
       ],
       [
         0,
-<<<<<<< HEAD
-        17,
-        2,
+        18,
         0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      [
-        0,
-        0,
-        17,
-        1,
         1,
         0,
         0,
         0,
         0,
+        0,
+        0,
         0
       ],
       [
-        0,
         0,
         0,
         16,
         1,
         0,
         0,
+        2,
         0,
         0,
-        2
+        0,
+        0
       ],
       [
         0,
         0,
+        1,
+        16,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        0,
+        18,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
         2,
         1,
+        2,
+        0,
+        12,
+        1,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
         11,
         0,
         0,
-        3,
-        0,
-        2
-      ],
-      [
-        0,
-        0,
-        0,
-        0,
-        0,
-        12,
-        0,
-        0,
         0,
         0
       ],
@@ -282,74 +248,11 @@
         0,
         0,
         0,
+        0,
+        0,
+        0,
+        17,
         1,
-        0,
-        16,
-        0,
-        0,
-        2
-      ],
-      [
-        0,
-        2,
-        3,
-        0,
-        2,
-        0,
-        0,
-        12,
-=======
-        3,
-        1,
-        0,
-        2,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      [
-        0,
-        0,
-        6,
-        0,
-        0,
-        0,
-        0,
-        0,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
-        0,
-        0
-      ],
-      [
-        0,
-        0,
-        0,
-<<<<<<< HEAD
-=======
-        6,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      [
-        0,
-        1,
-        1,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
-        0,
-        3,
-        0,
-        0,
-<<<<<<< HEAD
-        1,
-        15,
-=======
-        0,
         0,
         1
       ],
@@ -357,70 +260,44 @@
         0,
         0,
         0,
+        2,
         0,
-        0,
-        4,
-        0,
-        0,
-        0,
-        0
-      ],
-      [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        6,
-        0,
-        0,
-        0
-      ],
-      [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        6,
-        0,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
-        0
-      ],
-      [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-<<<<<<< HEAD
         1,
-        18
-=======
-        6,
+        0,
+        0,
+        16,
+        0,
         0
       ],
       [
         0,
         0,
+        1,
+        2,
+        0,
+        1,
+        0,
+        0,
+        0,
+        15,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
         0,
         0,
         0,
         0,
+        1,
+        1,
         0,
-        0,
-        0,
-        6
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
+        15
       ]
     ],
     "confusion_matrix_labels": [
+      "device_control",
       "fertilization",
       "general",
       "growing",
@@ -432,55 +309,60 @@
       "temperature",
       "watering"
     ],
-<<<<<<< HEAD
-    "uncalibrated_accuracy": 0.825136612021858,
+    "uncalibrated_accuracy": 0.8592233009708737,
     "classification_report": {
+      "device_control": {
+        "precision": 0.9583333333333334,
+        "recall": 1.0,
+        "f1-score": 0.9787234042553191,
+        "support": 23.0
+      },
       "fertilization": {
-        "precision": 1.0,
-        "recall": 0.8947368421052632,
-        "f1-score": 0.9444444444444444,
+        "precision": 0.9,
+        "recall": 0.9473684210526315,
+        "f1-score": 0.9230769230769231,
         "support": 19.0
       },
       "general": {
-        "precision": 0.8095238095238095,
-        "recall": 0.8947368421052632,
-        "f1-score": 0.85,
+        "precision": 0.7619047619047619,
+        "recall": 0.8421052631578947,
+        "f1-score": 0.8,
         "support": 19.0
       },
       "growing": {
-        "precision": 0.7083333333333334,
-        "recall": 0.8947368421052632,
-        "f1-score": 0.7906976744186046,
+        "precision": 0.6666666666666666,
+        "recall": 0.8421052631578947,
+        "f1-score": 0.7441860465116279,
         "support": 19.0
       },
       "humidity": {
-        "precision": 0.8888888888888888,
-        "recall": 0.8421052631578947,
-        "f1-score": 0.8648648648648649,
+        "precision": 0.9473684210526315,
+        "recall": 0.9473684210526315,
+        "f1-score": 0.9473684210526315,
         "support": 19.0
       },
       "problems": {
-        "precision": 0.5789473684210527,
-        "recall": 0.5789473684210527,
-        "f1-score": 0.5789473684210527,
+        "precision": 0.8,
+        "recall": 0.631578947368421,
+        "f1-score": 0.7058823529411765,
         "support": 19.0
       },
       "sensor_records": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1-score": 1.0,
+        "precision": 0.7857142857142857,
+        "recall": 0.9166666666666666,
+        "f1-score": 0.8461538461538461,
         "support": 12.0
       },
       "soil": {
-        "precision": 1.0,
-        "recall": 0.8421052631578947,
-        "f1-score": 0.9142857142857143,
+        "precision": 0.9444444444444444,
+        "recall": 0.8947368421052632,
+        "f1-score": 0.918918918918919,
         "support": 19.0
       },
       "sunlight": {
-        "precision": 0.75,
-        "recall": 0.631578947368421,
-        "f1-score": 0.6857142857142857,
+        "precision": 0.8421052631578947,
+        "recall": 0.8421052631578947,
+        "f1-score": 0.8421052631578947,
         "support": 19.0
       },
       "temperature": {
@@ -490,79 +372,85 @@
         "support": 19.0
       },
       "watering": {
-        "precision": 0.75,
-        "recall": 0.9473684210526315,
-        "f1-score": 0.8372093023255814,
+        "precision": 0.9375,
+        "recall": 0.7894736842105263,
+        "f1-score": 0.8571428571428571,
         "support": 19.0
       },
-      "accuracy": 0.825136612021858,
+      "accuracy": 0.8592233009708737,
       "macro avg": {
-        "precision": 0.8423193400167085,
-        "recall": 0.8315789473684211,
-        "f1-score": 0.8323306511617405,
-        "support": 183.0
+        "precision": 0.8619579251158197,
+        "recall": 0.8584529505582136,
+        "f1-score": 0.8564273536685502,
+        "support": 206.0
       },
       "weighted avg": {
-        "precision": 0.8362878393616099,
-        "recall": 0.825136612021858,
-        "f1-score": 0.8259170695121896,
-        "support": 183.0
+        "precision": 0.8664200955463092,
+        "recall": 0.8592233009708737,
+        "f1-score": 0.8591511340323852,
+        "support": 206.0
       }
     }
   },
   "chatbot_routing_test_metrics": {
-    "loss": 1.1463404893875122,
-    "accuracy": 0.825136612021858,
-    "macro_precision": 0.8420637846359679,
-    "macro_recall": 0.8254385964912281,
-    "macro_f1": 0.828986743918529,
+    "loss": 1.1568115949630737,
+    "accuracy": 0.8495145631067961,
+    "macro_precision": 0.8643181036369891,
+    "macro_recall": 0.8405103668261563,
+    "macro_f1": 0.845957771890739,
     "per_intent": {
+      "device_control": {
+        "precision": 0.9583333333333334,
+        "recall": 1.0,
+        "f1": 0.9787234042553191,
+        "support": 23
+      },
       "fertilization": {
-        "precision": 1.0,
-        "recall": 0.8947368421052632,
-        "f1": 0.9444444444444444,
+        "precision": 0.9,
+        "recall": 0.9473684210526315,
+        "f1": 0.9230769230769231,
         "support": 19
       },
       "general": {
-        "precision": 0.7391304347826086,
-        "recall": 0.8947368421052632,
-        "f1": 0.8095238095238095,
-        "support": 19
-      },
-      "growing": {
         "precision": 0.7083333333333334,
         "recall": 0.8947368421052632,
         "f1": 0.7906976744186046,
         "support": 19
       },
-      "humidity": {
-        "precision": 0.9411764705882353,
+      "growing": {
+        "precision": 0.6666666666666666,
         "recall": 0.8421052631578947,
-        "f1": 0.8888888888888888,
+        "f1": 0.744186046511628,
+        "support": 19
+      },
+      "humidity": {
+        "precision": 0.9473684210526315,
+        "recall": 0.9473684210526315,
+        "f1": 0.9473684210526315,
         "support": 19
       },
       "problems": {
-        "precision": 0.631578947368421,
-        "recall": 0.631578947368421,
-        "f1": 0.631578947368421,
+        "precision": 0.8125,
+        "recall": 0.6842105263157895,
+        "f1": 0.742857142857143,
         "support": 19
       },
       "sensor_records": {
         "precision": 1.0,
-        "recall": 0.8333333333333334,
-        "f1": 0.9090909090909091,
+        "recall": 0.6666666666666666,
+        "f1": 0.8,
         "support": 12
       },
       "soil": {
-        "precision": 0.8947368421052632,
+        "precision": 0.9444444444444444,
         "recall": 0.8947368421052632,
-        "f1": 0.8947368421052632,
+        "f1": 0.918918918918919,
         "support": 19
       },
       "sunlight": {
         "precision": 0.75,
-        "recall": 0.631578947368421,
-        "f1": 0.6857142857142857,
+        "recall": 0.7894736842105263,
+        "f1": 0.7692307692307692,
         "support": 19
       },
       "temperature": {
@@ -572,121 +460,44 @@
         "support": 19
       },
       "watering": {
-        "precision": 0.8181818181818182,
-        "recall": 0.9473684210526315,
-        "f1": 0.8780487804878049,
+        "precision": 0.8823529411764706,
+        "recall": 0.7894736842105263,
+        "f1": 0.8333333333333333,
         "support": 19
-=======
-    "uncalibrated_accuracy": 0.896551724137931
-  },
-  "chatbot_routing_test_metrics": {
-    "loss": 1.0035103559494019,
-    "accuracy": 0.896551724137931,
-    "macro_precision": 0.8957142857142857,
-    "macro_recall": 0.9,
-    "macro_f1": 0.8905472305472305,
-    "per_intent": {
-      "fertilization": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "support": 6
-      },
-      "general": {
-        "precision": 0.8,
-        "recall": 0.6666666666666666,
-        "f1": 0.7272727272727272,
-        "support": 6
-      },
-      "growing": {
-        "precision": 0.75,
-        "recall": 1.0,
-        "f1": 0.8571428571428571,
-        "support": 6
-      },
-      "humidity": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "support": 6
-      },
-      "problems": {
-        "precision": 0.75,
-        "recall": 0.5,
-        "f1": 0.6,
-        "support": 6
-      },
-      "sensor_records": {
-        "precision": 0.8,
-        "recall": 1.0,
-        "f1": 0.888888888888889,
-        "support": 4
-      },
-      "soil": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "support": 6
-      },
-      "sunlight": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "support": 6
-      },
-      "temperature": {
-        "precision": 1.0,
-        "recall": 0.8333333333333334,
-        "f1": 0.9090909090909091,
-        "support": 6
-      },
-      "watering": {
-        "precision": 0.8571428571428571,
-        "recall": 1.0,
-        "f1": 0.923076923076923,
-        "support": 6
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
       }
     },
     "confusion_matrix": [
       [
-<<<<<<< HEAD
+        23,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        18,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
         17,
         2,
-=======
-        6,
-        0,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      [
-        0,
-<<<<<<< HEAD
-        17,
-        2,
-=======
-        4,
-        1,
-        0,
-        1,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      [
-        0,
-        0,
-        6,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
         0,
         0,
         0,
@@ -698,56 +509,54 @@
       [
         0,
         0,
-<<<<<<< HEAD
-        17,
         1,
-        1,
-=======
-        0,
-        6,
-        0,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      [
-        0,
-<<<<<<< HEAD
-        0,
-        0,
         16,
+        0,
         1,
         0,
         0,
         0,
-        0,
-        2
+        1,
+        0
       ],
       [
         0,
-        1,
-        1,
-        0,
-        12,
         0,
         0,
-        3,
         0,
-        2
-=======
-        1,
+        18,
+        0,
+        0,
+        0,
         1,
         0,
-        3,
+        0
+      ],
+      [
+        0,
+        2,
+        2,
+        1,
+        0,
+        13,
         0,
         0,
+        1,
         0,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        8,
+        0,
+        1,
         0,
         1
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
       ],
       [
         0,
@@ -755,101 +564,55 @@
         0,
         0,
         0,
-<<<<<<< HEAD
-        10,
-        2,
-=======
-        4,
         0,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
-        0,
-        0,
-        0
-      ],
-      [
-        0,
-        0,
-<<<<<<< HEAD
-        1,
-        0,
-        1,
         0,
         17,
-=======
+        1,
         0,
-        0,
-        0,
-        0,
-        6,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
-        0,
-        0,
-        0
+        1
       ],
       [
-        0,
-<<<<<<< HEAD
-        2,
-        3,
-        0,
-        2,
-        0,
-        0,
-        12,
-=======
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        6,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
-        0,
-        0
-      ],
-      [
-        0,
-<<<<<<< HEAD
         1,
         0,
         0,
         2,
         0,
-        0,
         1,
+        0,
+        0,
         15,
-=======
         0,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        5,
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
         0
       ],
       [
         0,
         0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-<<<<<<< HEAD
         1,
-        18
-=======
+        2,
         0,
-        6
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
+        1,
+        0,
+        0,
+        0,
+        15,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        15
       ]
     ],
     "confusion_matrix_labels": [
+      "device_control",
       "fertilization",
       "general",
       "growing",
@@ -862,27 +625,31 @@
       "watering"
     ]
   },
-<<<<<<< HEAD
   "multilingual_smoke_tests": {
     "per_language": {
       "English": {
-        "support": 10,
+        "support": 16,
         "accuracy": 1.0,
         "routed_accuracy": 1.0
       },
       "Tagalog": {
-        "support": 10,
+        "support": 16,
         "accuracy": 1.0,
         "routed_accuracy": 1.0
       },
       "Taglish": {
-        "support": 10,
+        "support": 16,
         "accuracy": 1.0,
         "routed_accuracy": 1.0
       }
     },
     "classifier_accuracy": 1.0,
     "routed_accuracy": 1.0,
+    "device_control": {
+      "support": 18,
+      "classifier_accuracy": 1.0,
+      "routed_accuracy": 1.0
+    },
     "cases": [
       {
         "language": "English",
@@ -1025,6 +792,48 @@
         "routed_intent": "sensor_records"
       },
       {
+        "language": "Tagalog",
+        "text": "Buksan ang bentilador.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "Tagalog",
+        "text": "Patayin ang mga ilaw.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "Tagalog",
+        "text": "Paandarin ang pandilig.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "Tagalog",
+        "text": "I-off ang fan.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "Tagalog",
+        "text": "Ihinto ang bomba ng tubig.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "Tagalog",
+        "text": "Sindihan ang ilaw sa halaman.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
         "language": "Taglish",
         "text": "Ano ba yung stevia, plant ba siya?",
         "expected": "general",
@@ -1093,6 +902,90 @@
         "expected": "sensor_records",
         "predicted": "sensor_records",
         "routed_intent": "sensor_records"
+      },
+      {
+        "language": "Taglish",
+        "text": "Paki-open yung fan ngayon.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "Taglish",
+        "text": "I-off mo yung grow lights.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "Taglish",
+        "text": "Turn on natin yung sprinkler.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "Taglish",
+        "text": "Stop mo yung water pump.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "Taglish",
+        "text": "Switch on mo yung ilaw.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "Taglish",
+        "text": "Deactivate mo yung fan, please.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "English",
+        "text": "Please activate the fan.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "English",
+        "text": "Turn off the grow lights.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "English",
+        "text": "Start the sprinkler.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "English",
+        "text": "Switch the water pump off.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "English",
+        "text": "Open the greenhouse light.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
+      },
+      {
+        "language": "English",
+        "text": "Stop the fan.",
+        "expected": "device_control",
+        "predicted": "device_control",
+        "routed_intent": "device_control"
       }
     ]
   },
@@ -1101,14 +994,10 @@
     "previous_model_name": "bert-base-uncased",
     "previous_test_accuracy": 0.896551724137931,
     "previous_test_macro_f1": 0.8925674325674325,
-    "accuracy_delta": -0.0714151121160731,
-    "macro_f1_delta": -0.060236781405692,
+    "accuracy_delta": -0.03732842316705731,
+    "macro_f1_delta": -0.036140078898882155,
     "comparable_test_sets": false,
     "note": "The previous report used a different English-only dataset and 58 test samples. Metric deltas are descriptive, not a controlled comparison."
   },
   "note": "Training phrases are synthetic. Held-out test scores are not estimates of real-world performance; validate against independently collected, consented user conversations before deployment. The multilingual smoke suite is a small manually written check, not a statistically representative benchmark."
-=======
-  "note": "Training phrases are synthetic. Held-out test scores are not estimates of real-world performance; validate against independently collected user conversations before deployment.",
-  "intent_confidence_threshold": 0.86
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 }

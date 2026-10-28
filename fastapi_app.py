@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from stevia_bot.chatbot import SteviaChatbot
+from stevia_bot.device_control import DeviceControlError, send_device_command
 
 app = FastAPI(title="Stevia Chatbot API")
 chatbot = SteviaChatbot()
@@ -18,6 +19,12 @@ class ChatRequest(BaseModel):
     message: str
     sensor_data: dict[str, Any] | None = None
     history: list[ChatTurn] | None = None
+
+
+class DeviceCommandRequest(BaseModel):
+    device: Literal["light", "fan", "pump"]
+    action: Literal["ON", "OFF"]
+    confirmed: bool
 
 
 @app.post("/api/chat")
@@ -36,3 +43,19 @@ def chat(payload: ChatRequest) -> dict[str, Any]:
         sensor_data=payload.sensor_data,
         history=history,
     )
+
+
+@app.post("/api/device-command")
+def device_command(payload: DeviceCommandRequest) -> dict[str, Any]:
+    if not payload.confirmed:
+        raise HTTPException(
+            status_code=400,
+            detail="Device command confirmation is required.",
+        )
+    try:
+        return send_device_command(payload.device, payload.action)
+    except DeviceControlError as error:
+        raise HTTPException(
+            status_code=error.status_code,
+            detail=str(error),
+        ) from error

@@ -93,6 +93,57 @@ function addSensorRecordsTable(container, records) {
   container.appendChild(wrapper);
 }
 
+function addDeviceConfirmation(container, data) {
+  if (!data.confirmation?.required || !data.device_command) return;
+
+  const controls = document.createElement('div');
+  controls.className = 'device-confirmation';
+  data.confirmation.options.forEach((option) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = option.label;
+    button.addEventListener('click', () => {
+      handleDeviceConfirmation(button, controls, data.device_command, option.value);
+    });
+    controls.appendChild(button);
+  });
+  container.appendChild(controls);
+}
+
+async function handleDeviceConfirmation(button, controls, command, choice) {
+  controls.querySelectorAll('button').forEach((item) => {
+    item.disabled = true;
+  });
+
+  if (choice === 'no') {
+    const responseText = 'Cancelled. No device command was sent.';
+    controls.replaceWith(document.createTextNode(responseText));
+    conversation.push({ role: 'user', content: 'No' });
+    conversation.push({ role: 'assistant', content: responseText });
+    return;
+  }
+
+  button.textContent = 'Sending...';
+  try {
+    const response = await fetch('/api/device-command', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({...command, confirmed: true}),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || data.detail || 'Unable to send device command.');
+
+    const responseText = data.message || 'Device command sent.';
+    controls.replaceWith(document.createTextNode(responseText));
+    conversation.push({ role: 'user', content: 'Yes' });
+    conversation.push({ role: 'assistant', content: responseText });
+  } catch (error) {
+    controls.replaceWith(document.createTextNode(
+      error instanceof Error ? error.message : 'Unable to send device command.'
+    ));
+  }
+}
+
 async function ask(question) {
   addMessage(question, 'user');
   conversation.push({ role: 'user', content: question });
@@ -108,6 +159,7 @@ async function ask(question) {
     if (!response.ok) throw new Error(data.error || 'Unable to answer right now.');
     pending.querySelector('p').textContent = data.answer;
     addSensorRecordsTable(pending.querySelector('.bubble'), data.sensor_records);
+    addDeviceConfirmation(pending.querySelector('.bubble'), data);
     pending.querySelector('small').textContent = `${data.topic} · ${data.source}`;
     conversation.push({ role: 'assistant', content: data.answer });
   } catch (error) {

@@ -2,6 +2,7 @@
   "model_name": "multilingual-character-word-tfidf-sgd",
   "model_type": "TF-IDF character and word n-gram features with Tagalog/Taglish normalization and incremental SGD logistic regression",
   "labels": [
+    "device_control",
     "fertilization",
     "general",
     "growing",
@@ -23,7 +24,7 @@
           2,
           5
         ],
-        "vocabulary_size": 8449
+        "vocabulary_size": 8532
       },
       "word": {
         "analyzer": "word",
@@ -31,22 +32,22 @@
           1,
           2
         ],
-        "vocabulary_size": 3925
+        "vocabulary_size": 4043
       }
     },
     "feature_weights": {
       "character": 1.0,
       "word": 0.8
     },
-    "total_vocabulary_size": 12374
+    "total_vocabulary_size": 12575
   },
-  "batch_size": 32,
+  "batch_size": 16,
   "learning_rate": 0.05,
   "alpha": 1e-05,
   "epochs_completed": 50,
   "best_epoch": 50,
-  "early_stopping_patience": 5,
-  "confidence_temperature": 0.4363550841808319,
-  "intent_confidence_threshold": 0.66,
+  "early_stopping_patience": 7,
+  "confidence_temperature": 0.35343560576438904,
+  "intent_confidence_threshold": 0.67,
   "training_device": "cpu"
 }

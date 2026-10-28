@@ -34,8 +34,38 @@ _TYPOGRAPHY_COMMON_WORDS = {
     "based", "on", "see",
 }
 _TYPOGRAPHY_CONFIRMATION_PREFIX = "Typo check: Did you mean"
-<<<<<<< HEAD
 _TAGALOG_PHRASES = {
+    "buksan ang": "open the",
+    "buksan mo": "open",
+    "buksan": "open",
+    "paandarin ang": "start the",
+    "paandarin mo": "start",
+    "paandarin": "start",
+    "sindihan": "turn on",
+    "patayin ang": "turn off the",
+    "patayin mo": "turn off",
+    "patayin": "turn off",
+    "i-on ang": "turn on the",
+    "i-on mo": "turn on",
+    "i-on": "turn on",
+    "pa-on": "turn on",
+    "paki-on": "turn on",
+    "i-off ang": "turn off the",
+    "i-off mo": "turn off",
+    "i-off": "turn off",
+    "pa-off": "turn off",
+    "paki-off": "turn off",
+    "isara ang": "close the",
+    "isara mo": "close",
+    "isara": "close",
+    "ihinto ang": "stop the",
+    "ihinto mo": "stop",
+    "ihinto": "stop",
+    "bentilador": "fan",
+    "ilaw": "lights",
+    "mga ilaw": "lights",
+    "bomba": "pump",
+    "pandilig": "sprinkler",
     "batay sa": "based on",
     "ayon sa": "based on",
     "based sa": "based on",
@@ -151,6 +181,9 @@ _TAGALOG_PHRASES = {
     "masama": "wrong",
 }
 _TAGALOG_MARKERS = {
+    "buksan", "paandarin", "patayin", "sindihan", "i-on", "i-off", "pa-on", "pa-off",
+    "paki-on", "paki-off", "isara", "ihinto", "bentilador", "ilaw", "bomba",
+    "pandilig", "huwag", "wag",
     "batay", "ayon", "paano", "dapat", "diligan", "didiligan", "magdilig",
     "pagdidilig", "halaman", "lupa", "tubig", "tuyo", "basa", "liwanag",
     "halumigmig", "maalinsangan", "gaano", "rekomendasyon", "mairerekomenda",
@@ -173,14 +206,21 @@ _TAGALOG_MARKERS = {
 
 class SteviaChatbot:
     """Answers Stevia questions with a local intent classifier and deterministic fallback."""
-=======
-
-
-class SteviaChatbot:
-    """Answers Stevia questions with a fine-tuned BERT classifier and deterministic fallback."""
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 
     MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "stevia-intent-bert"
+    DEVICE_ALIASES = {
+        "light": "light",
+        "lights": "light",
+        "lamp": "light",
+        "lamps": "light",
+        "ilaw": "light",
+        "fan": "fan",
+        "bentilador": "fan",
+        "pump": "pump",
+        "bomba": "pump",
+        "sprinkler": "pump",
+        "pandilig": "pump",
+    }
     _TYPOGRAPHY_CONFIRMATION_PREFIX = _TYPOGRAPHY_CONFIRMATION_PREFIX
     OUT_OF_SCOPE_RESPONSE = "Sorry, your question is outside my scope. I can only answer questions related to stevia."
     SENSOR_RECORDS_CONFIRMATION = (
@@ -200,7 +240,6 @@ class SteviaChatbot:
             return
         self._model_loaded = True
         try:
-<<<<<<< HEAD
             classifier_path = self.MODEL_PATH / "intent_classifier.joblib"
             if classifier_path.exists():
                 import joblib
@@ -212,13 +251,6 @@ class SteviaChatbot:
                 self.tokenizer = AutoTokenizer.from_pretrained(self.MODEL_PATH)
                 self.model = AutoModelForSequenceClassification.from_pretrained(self.MODEL_PATH)
                 self.model.eval()
-=======
-            from transformers import AutoModelForSequenceClassification, AutoTokenizer
-
-            self.tokenizer = AutoTokenizer.from_pretrained(self.MODEL_PATH)
-            self.model = AutoModelForSequenceClassification.from_pretrained(self.MODEL_PATH)
-            self.model.eval()
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
         except Exception as error:
             self.model_error = str(error)
             _LOGGER.warning("Unable to load the intent classifier", exc_info=True)
@@ -229,7 +261,6 @@ class SteviaChatbot:
 
     def _model_scores(self, question: str) -> dict[str, float]:
         self._ensure_model()
-<<<<<<< HEAD
         if not self.model:
             return {}
 
@@ -248,9 +279,6 @@ class SteviaChatbot:
             }
 
         if not self.tokenizer:
-=======
-        if not self.model or not self.tokenizer:
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
             return {}
 
         import torch
@@ -562,7 +590,6 @@ class SteviaChatbot:
 
         if model_scores and self.model is not None:
             model_intent = max(model_scores, key=model_scores.get)
-<<<<<<< HEAD
             model_config = getattr(self.model, "config", None)
             confidence_threshold = float(
                 getattr(
@@ -570,10 +597,6 @@ class SteviaChatbot:
                     "intent_confidence_threshold",
                     getattr(model_config, "intent_confidence_threshold", 1.0),
                 )
-=======
-            confidence_threshold = float(
-                getattr(self.model.config, "intent_confidence_threshold", 1.0)
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
             )
             intent_keywords = {
                 word
@@ -586,11 +609,7 @@ class SteviaChatbot:
                 and not negated_intent
                 and model_scores[model_intent] >= confidence_threshold
             ):
-<<<<<<< HEAD
                 return model_intent, "intent classifier"
-=======
-                return model_intent, "fine-tuned classifier"
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 
         # A specific care word such as "water" should beat the generic
         # "plant" match in questions like "Should I water the plant?".
@@ -601,11 +620,7 @@ class SteviaChatbot:
         if specific_keyword_score > 0:
             keyword_scores["general"] = 0.0
 
-<<<<<<< HEAD
         # Keyword evidence keeps answers stable while the classifier supplies context.
-=======
-        # Keyword evidence keeps answers stable while BERT supplies semantic context.
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
         combined = {
             intent: keyword_scores[intent] + model_scores.get(intent, 0.0) * 0.35
             for intent in KNOWLEDGE_BASE
@@ -613,11 +628,7 @@ class SteviaChatbot:
         intent = max(combined, key=combined.get)
         if combined[intent] == 0:
             return "general", "fallback"
-<<<<<<< HEAD
         source = "intent classifier + knowledge-base" if model_scores else "knowledge-base fallback"
-=======
-        source = "fine-tuned classifier + knowledge-base" if model_scores else "knowledge-base fallback"
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
         return intent, source
 
     def _build_llm_context(self, question: str, history: list[dict[str, Any]] | None, sensor_data: dict[str, Any]) -> str:
@@ -686,6 +697,39 @@ class SteviaChatbot:
             _LOGGER.warning("OpenAI response generation failed", exc_info=True)
             return None
 
+    @classmethod
+    def _device_command(cls, question: str) -> dict[str, str] | None:
+        question_lower = question.casefold()
+        if re.search(r"\b(?:do not|don't|never|huwag|wag)\b", question_lower):
+            return None
+        device_match = re.search(
+            r"\b(light|lights|lamp|lamps|ilaw|fan|bentilador|pump|bomba|sprinkler|pandilig)\b",
+            question_lower,
+        )
+        if not device_match or re.search(
+            r"\bshould\s+(?:i|we)\b|\b(?:dapat|kailangan)\s+(?:ko|natin)\b",
+            question_lower,
+        ):
+            return None
+
+        device = cls.DEVICE_ALIASES[device_match.group(1)]
+        if re.search(
+            r"\b(?:turn\s+(?:the\s+)?off|switch\s+(?:the\s+)?off|"
+            r"close|stop|deactivate)\b|\b(?:fan|lights?|pump|sprinkler)\s+off\b",
+            question_lower,
+        ):
+            action = "OFF"
+        elif re.search(
+            r"\b(?:open|turn\s+(?:the\s+)?on|switch\s+(?:the\s+)?on|"
+            r"start|activate)\b|\b(?:fan|lights?|pump|sprinkler)\s+on\b",
+            question_lower,
+        ):
+            action = "ON"
+        else:
+            return None
+
+        return {"device": device, "action": action}
+
     def answer(
         self,
         question: str,
@@ -695,16 +739,12 @@ class SteviaChatbot:
         manual_sensor_data = sensor_data if isinstance(sensor_data, dict) else {}
         combined_sensor_data = {**LATEST_READING, **manual_sensor_data}
         history = self._history_before_current(question, history)
-<<<<<<< HEAD
         tagalog_response = self._contains_tagalog(question)
         taglish_response = self._contains_taglish(question)
-=======
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
         pending_typo = self._pending_typo_confirmation(history)
         if pending_typo:
             original_question, corrected_question = pending_typo
             reply = question.strip().casefold()
-<<<<<<< HEAD
             if reply in {"yes", "y", "correct", "that's right", "that is right", "oo", "opo", "tama"}:
                 question = corrected_question
             elif reply in {"no", "n", "nope", "not that", "hindi", "hindi po"}:
@@ -714,13 +754,6 @@ class SteviaChatbot:
                         if tagalog_response
                         else "Okay. Please rephrase your request with the intended words."
                     ),
-=======
-            if reply in {"yes", "y", "correct", "that's right", "that is right"}:
-                question = corrected_question
-            elif reply in {"no", "n", "nope", "not that"}:
-                return self._response(
-                    "Okay. Please rephrase your request with the intended words.",
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                     "Typo clarification",
                     "typo_clarification",
                     "typo confirmation",
@@ -728,7 +761,6 @@ class SteviaChatbot:
                 )
             else:
                 question = self._correct_typographical_errors(question)
-<<<<<<< HEAD
         tagalog_response = tagalog_response or self._contains_tagalog(question)
         taglish_response = taglish_response or self._contains_taglish(question)
         question = self._normalize_tagalog_question(question)
@@ -759,8 +791,51 @@ class SteviaChatbot:
                 sensor_records=sensor_records,
             )
 
-=======
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
+        device_command = self._device_command(question)
+        if device_command:
+            device_label = (
+                "lights" if device_command["device"] == "light"
+                else "sprinkler" if "sprinkler" in question.casefold()
+                else device_command["device"]
+            )
+            action_label = "turn on" if device_command["action"] == "ON" else "turn off"
+            if tagalog_response:
+                device_name = {
+                    "light": "ilaw",
+                    "fan": "bentilador",
+                    "pump": "sprinkler" if "sprinkler" in question.casefold() else "bomba",
+                }[device_command["device"]]
+                if taglish_response:
+                    prompt = (
+                        f"I-on ang {device_name}?"
+                        if device_command["action"] == "ON"
+                        else f"I-off ang {device_name}?"
+                    )
+                else:
+                    prompt = (
+                        f"Gusto mo bang buksan ang {device_name}?"
+                        if device_command["action"] == "ON"
+                        else f"Gusto mo bang patayin ang {device_name}?"
+                    )
+            else:
+                prompt = f"Would you like me to {action_label} the {device_label}?"
+            result = respond(
+                prompt,
+                "Device control",
+                "device_control",
+                "device confirmation",
+                combined_sensor_data,
+            )
+            result["device_command"] = device_command
+            result["confirmation"] = {
+                "required": True,
+                "options": [
+                    {"label": "Yes", "value": "yes"},
+                    {"label": "No", "value": "no"},
+                ],
+            }
+            return result
+
         corrections = self._typographical_corrections(question)
         requires_confirmation = (
             len(corrections) > 1
@@ -771,11 +846,7 @@ class SteviaChatbot:
                 question,
                 corrections,
             )
-<<<<<<< HEAD
             return respond(
-=======
-            return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                 f"{self._TYPOGRAPHY_CONFIRMATION_PREFIX}: [{suggested_question}]? "
                 'Reply "yes" to use it, or "no" to leave the message unchanged.',
                 "Typo clarification",
@@ -789,22 +860,14 @@ class SteviaChatbot:
             social_reply = "Hi! Ask me about your Stevia plant care, watering, light, soil, or temperature."
             if any(word in question.lower() for word in ["thank", "thanks", "welcome"]):
                 social_reply = "You’re welcome! Ask me anything about your Stevia care."
-<<<<<<< HEAD
             return respond(
-=======
-            return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                 social_reply, "About Stevia", "general", "social", combined_sensor_data
             )
 
         if self._is_awaiting_sensor_records_selection(history):
             selection = self._sensor_records_selection(question)
             if selection is None and not self._is_new_topic_question(question):
-<<<<<<< HEAD
                 return respond(
-=======
-                return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                     self.SENSOR_RECORDS_CONFIRMATION,
                     "Historical sensor records",
                     "sensor_records",
@@ -815,11 +878,7 @@ class SteviaChatbot:
             if selection is not None:
                 records = load_sensor_records()
                 selected_records = records if selection == "all" else records[:selection]
-<<<<<<< HEAD
                 return respond(
-=======
-                return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                     self._sensor_records_summary(selected_records, selection),
                     "Historical sensor records",
                     "sensor_records",
@@ -832,11 +891,7 @@ class SteviaChatbot:
             selection = self._sensor_records_selection(question)
             records = load_sensor_records()
             selected_records = records[:selection] if isinstance(selection, int) else records
-<<<<<<< HEAD
             return respond(
-=======
-            return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                 self._sensor_records_summary(selected_records, selection),
                 "Historical sensor records",
                 "sensor_records",
@@ -850,11 +905,7 @@ class SteviaChatbot:
             limit, offset = follow_up
             records = load_sensor_records()
             selected_records = records[offset:] if limit == "all" else records[offset:offset + limit]
-<<<<<<< HEAD
             return respond(
-=======
-            return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                 self._sensor_records_summary(selected_records, limit, offset),
                 "Historical sensor records",
                 "sensor_records",
@@ -864,11 +915,7 @@ class SteviaChatbot:
             )
 
         if not self._is_in_scope(question, history):
-<<<<<<< HEAD
             return respond(
-=======
-            return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                 self.OUT_OF_SCOPE_RESPONSE,
                 "Outside scope",
                 "out_of_scope",
@@ -877,11 +924,7 @@ class SteviaChatbot:
             )
 
         if self._asks_for_sensor_records(question):
-<<<<<<< HEAD
             return respond(
-=======
-            return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                 self.SENSOR_RECORDS_CONFIRMATION,
                 "Historical sensor records",
                 "sensor_records",
@@ -890,11 +933,7 @@ class SteviaChatbot:
             )
 
         if self._asks_for_latest_reading_count(question):
-<<<<<<< HEAD
             return respond(
-=======
-            return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                 self.SENSOR_RECORDS_CONFIRMATION,
                 "Historical sensor records",
                 "sensor_records",
@@ -903,11 +942,7 @@ class SteviaChatbot:
             )
 
         if self._asks_for_sensor_assessment(question):
-<<<<<<< HEAD
             return respond(
-=======
-            return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                 self._sensor_reading_assessment(combined_sensor_data),
                 "Sensor-based plant check",
                 "problems",
@@ -916,11 +951,7 @@ class SteviaChatbot:
             )
 
         if self._asks_for_current_readings(question):
-<<<<<<< HEAD
             return respond(
-=======
-            return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                 self._current_reading_summary(combined_sensor_data, history),
                 "Current sensor readings",
                 "sensor",
@@ -931,11 +962,7 @@ class SteviaChatbot:
         intent, source = self._select_intent(question, history=history)
         sensor_note = self._sensor_note(combined_sensor_data, intent)
         if sensor_note:
-<<<<<<< HEAD
             return respond(
-=======
-            return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                 sensor_note,
                 KNOWLEDGE_BASE[intent]["title"],
                 intent,
@@ -943,7 +970,6 @@ class SteviaChatbot:
                 combined_sensor_data,
             )
 
-<<<<<<< HEAD
         llm_response = (
             None
             if tagalog_response
@@ -951,11 +977,6 @@ class SteviaChatbot:
         )
         if llm_response:
             return respond(
-=======
-        llm_response = self._llm_answer(question, history, combined_sensor_data)
-        if llm_response:
-            return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
                 llm_response,
                 KNOWLEDGE_BASE[intent]["title"],
                 intent,
@@ -965,11 +986,7 @@ class SteviaChatbot:
 
         response = self._choose_response(intent, question, history)
 
-<<<<<<< HEAD
         return respond(
-=======
-        return self._response(
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
             response, KNOWLEDGE_BASE[intent]["title"], intent, source, combined_sensor_data
         )
 
@@ -996,7 +1013,6 @@ class SteviaChatbot:
         return response
 
     @staticmethod
-<<<<<<< HEAD
     def _contains_tagalog(question: str) -> bool:
         words = set(re.findall(r"[a-zA-Z-]+", question.casefold()))
         return bool(words.intersection(_TAGALOG_MARKERS))
@@ -1019,6 +1035,8 @@ class SteviaChatbot:
             "acidic", "neutral", "compost", "drainage", "sun", "shade",
             "bright", "window", "air", "mist", "feed", "nutrient", "yellow",
             "wilt", "fungus", "pest", "insect", "disease", "prune",
+            "fan", "fans", "light", "lights", "pump", "sprinkler", "open",
+            "close", "on", "off", "turn", "start", "stop", "activate",
             "history", "historical", "records", "record", "log", "measurements",
             "data", "old", "previous", "all", "table", "today", "yesterday",
             "leaves", "leaf", "roots", "root", "stem", "degrees", "hours",
@@ -1190,8 +1208,6 @@ class SteviaChatbot:
         )
 
     @staticmethod
-=======
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     def _is_social_only(question: str) -> bool:
         words = set(re.findall(r"[a-z]+", question.lower()))
         if not words:
@@ -1277,7 +1293,6 @@ class SteviaChatbot:
     @staticmethod
     def _asks_for_current_readings(question: str) -> bool:
         words = set(re.findall(r"[a-z]+", question.lower()))
-<<<<<<< HEAD
         if SteviaChatbot._asks_for_care_advice(words):
             return False
 
@@ -1308,9 +1323,6 @@ class SteviaChatbot:
                 and words.intersection({"how", "should"})
             )
         )
-=======
-        return bool(words.intersection({"sensor", "sensors", "reading", "readings", "measurement", "measurements", "snapshot"}))
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 
     @staticmethod
     def _asks_for_sensor_assessment(question: str) -> bool:
@@ -1398,12 +1410,9 @@ class SteviaChatbot:
             return None
 
         words = set(re.findall(r"[a-z]+", question.lower()))
-<<<<<<< HEAD
         if cls._asks_for_care_advice(words):
             return None
 
-=======
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
         is_next_page = "next" in words
         asks_for_latest = bool(words.intersection({"latest", "newest", "recent", "last"}))
         asks_for_table = bool(re.search(r"\btable\b", question, re.IGNORECASE))
@@ -1744,7 +1753,6 @@ class SteviaChatbot:
         if dataset_parameter == "soil_moisture":
             trend = SteviaChatbot._format_sensor_trend(sensor_data, trend_key, label)
             unit_text = f" {actual_unit}" if actual_unit else "%"
-<<<<<<< HEAD
             note = (
                 f"SPROUT's Stevia moisture target is {target}. The current soil-moisture reading is "
                 f"{reading}{unit_text}.{trend} SPROUT provides no numeric dry/moist thresholds or "
@@ -1777,16 +1785,6 @@ class SteviaChatbot:
                     "whether the soil itself needs water."
                 )
             return note
-=======
-            return (
-                f"SPROUT's Stevia moisture target is {target}. The current soil-moisture reading is "
-                f"{reading}{unit_text}.{trend} SPROUT provides no numeric dry/moist thresholds or "
-                "sensor calibration for this percentage, so it cannot reliably determine whether to irrigate. "
-                "As a planning guide, check the top inch daily and expect roughly 2-3 waterings per week in "
-                "warm weather, less in cool weather: water only when that layer is dry, wait if it is still "
-                "moist, and stop watering and improve drainage if the soil is saturated."
-            )
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 
         if dataset_parameter == "light_intensity" and actual_unit and actual_unit.lower() not in {
             "hours_direct_sun", "hours", "hours per day",

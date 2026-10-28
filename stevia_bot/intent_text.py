@@ -4,6 +4,8 @@ import unicodedata
 
 _PHRASE_TRANSLATIONS = (
     (re.compile(r"\bsikat\s+ng\s+araw\b"), "sunlight"),
+    (re.compile(r"\b(?:paki-)?i-on\b|\bpaki-on\b"), "turn on"),
+    (re.compile(r"\b(?:paki-)?i-off\b|\bpaki-off\b"), "turn off"),
 )
 _TOKEN_TRANSLATIONS = {
     "ano": "what",
@@ -22,6 +24,16 @@ _TOKEN_TRANSLATIONS = {
     "halumigmig": "humidity",
     "halaman": "plant",
     "init": "heat",
+    "buksan": "open",
+    "paandarin": "start",
+    "patayin": "turn off",
+    "sindihan": "turn on",
+    "isara": "close",
+    "ihinto": "stop",
+    "bentilador": "fan",
+    "ilaw": "lights",
+    "bomba": "pump",
+    "pandilig": "sprinkler",
     "itanim": "grow",
     "kailan": "when",
     "kailangan": "need",

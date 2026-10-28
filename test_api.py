@@ -163,6 +163,45 @@ class ChatApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json(), {"error": "Please enter a question."})
 
+    def test_device_command_requires_explicit_confirmation(self):
+        response = self.client.post(
+            "/api/device-command",
+            json={"device": "fan", "action": "ON", "confirmed": False},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "Device command confirmation is required."},
+        )
+
+    def test_confirmed_device_command_is_forwarded_to_backend(self):
+        with patch(
+            "app.send_device_command",
+            return_value={
+                "success": True,
+                "device": "fan",
+                "action": "ON",
+                "message": "Device command saved.",
+            },
+        ) as send_command:
+            response = self.client.post(
+                "/api/device-command",
+                json={"device": "fan", "action": "ON", "confirmed": True},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["success"], True)
+        send_command.assert_called_once_with("fan", "ON")
+
+    def test_invalid_device_command_is_rejected(self):
+        response = self.client.post(
+            "/api/device-command",
+            json={"device": "sprinkler", "action": "ON", "confirmed": True},
+        )
+
+        self.assertEqual(response.status_code, 400)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, render_template, request
 
 from stevia_bot.chatbot import SteviaChatbot
+from stevia_bot.device_control import DeviceControlError, send_device_command
 from stevia_bot.knowledge_base import SUGGESTED_QUESTIONS, WELCOME_MESSAGE
 
 app = Flask(__name__)
@@ -30,6 +31,28 @@ def chat():
 
     result = chatbot.answer(question, sensor_data=sensor_data, history=history)
     return jsonify(result)
+
+
+@app.post("/api/device-command")
+def device_command():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict) or payload.get("confirmed") is not True:
+        return jsonify({"error": "Device command confirmation is required."}), 400
+
+    device = payload.get("device")
+    action = payload.get("action")
+    if (
+        not isinstance(device, str)
+        or device not in {"light", "fan", "pump"}
+        or not isinstance(action, str)
+        or action not in {"ON", "OFF"}
+    ):
+        return jsonify({"error": "Invalid device command."}), 400
+
+    try:
+        return jsonify(send_device_command(device, action))
+    except DeviceControlError as error:
+        return jsonify({"error": str(error)}), error.status_code
 
 
 if __name__ == "__main__":

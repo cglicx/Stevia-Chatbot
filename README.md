@@ -1,12 +1,6 @@
-<<<<<<< HEAD
 # Stevia Chatbot
 
 A simple local Flask chatbot that answers common Stevia plant-care questions from a small knowledge base. It uses a locally trained multilingual character- and word-ngram classifier to identify the likely topic of each question. A keyword matcher is retained as a deterministic fallback if the local model cannot be loaded.
-=======
-# Stevia BERT Chatbot
-
-A simple local Flask chatbot that answers common Stevia plant-care questions from a small knowledge base. It uses a fine-tuned BERT sequence classifier to identify the likely topic of each question. A keyword matcher is retained as a deterministic fallback if the local model cannot be loaded.
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 
 ## Run locally
 
@@ -31,30 +25,27 @@ A simple local Flask chatbot that answers common Stevia plant-care questions fro
 
 4. Open http://127.0.0.1:5000 in a browser.
 
-<<<<<<< HEAD
 The trained classifier and its TF-IDF vocabularies are included in `models/stevia-intent-bert` as a local joblib model, so startup does not require a model download. The app still answers using the keyword and knowledge-base fallback if the local model is unavailable. A uniquely recognized one-edit typo in a Stevia-care or sensor term is corrected silently. A uniquely recognized typo requiring two edits, or multiple typos in one request, prompts the user to confirm the complete suggested correction; ambiguous or unrelated words are left unchanged. Reply "yes" to use the suggested request, or "no" to leave it unchanged and rephrase.
 
 The chatbot also recognizes common Tagalog and Taglish Stevia-care terms and questions, routes them through the same care and sensor rules, and responds in Tagalog or casual Taglish with a light, friendly tone when Filipino wording is detected. The intent-training CSV includes roughly 40-42 Tagalog and Taglish examples for each main care topic (26 each for sensor records), alongside the English examples, for future model retraining. This is a rule-based vocabulary and response set, not general-purpose translation.
-=======
-The trained classifier and tokenizer are included in `models/stevia-intent-bert`, so startup does not require a model download. The app still answers using the keyword and knowledge-base fallback if the local model is unavailable. A uniquely recognized one-edit typo in a Stevia-care or sensor term is corrected silently. A uniquely recognized typo requiring two edits, or multiple typos in one request, prompts the user to confirm the complete suggested correction; ambiguous or unrelated words are left unchanged. Reply "yes" to use the suggested request, or "no" to leave it unchanged and rephrase.
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
+
+Device requests in English, Tagalog, and Taglish (for example, "open fan," "buksan ang bentilador," "i-off mo yung fan," and "patayin ang ilaw") prompt for confirmation before sending a command. These phrases are also included under the `device_control` intent in the training CSV. The Yes button sends a confirmed command to `POST /api/device-command`; No sends nothing. That endpoint forwards JSON with a canonical `device` (`light`, `fan`, or `pump`) and `action` (`ON` or `OFF`) to the PHP backend's `POST device-control` route; "sprinkler" maps to `pump`. Configure the backend URL as an environment variable, including the front controller query parameter, for example:
+
+```powershell
+$env:DEVICE_CONTROL_API_URL = "http://192.168.1.20/Capstone/Backend/?url=device-control"
+```
+
+The configured backend should return a JSON response with `"success": true` and an optional `message`. Do not expose this unauthenticated device-control endpoint beyond a trusted network.
 
 ## Retraining and evaluation
 
-Retrain the intent model with:
+Retrain the intent model with a grouped, stratified 70/15/15 train/validation/test split. Device-control phrases are represented in Tagalog and Taglish alongside the care intents. Batch size 16 provides frequent updates for the smaller intent classes, with a 50-epoch maximum and validation-loss early stopping:
 
 ```powershell
-<<<<<<< HEAD
-python train_intent_classifier.py --data intent_training_data.csv --output-dir models/stevia-intent-bert --epochs 50 --batch-size 32 --learning-rate 0.05 --alpha 1e-5 --patience 5 --seed 42
+python train_intent_classifier.py --data intent_training_data.csv --output-dir models/stevia-intent-bert --epochs 50 --batch-size 16 --learning-rate 0.05 --alpha 1e-5 --patience 7 --seed 42
 ```
 
-Training uses a stratified 70/15/15 train/validation/test split and groups highly similar same-intent phrases to reduce split leakage. The multilingual character and word n-gram vocabularies are learned from the training set only, after common Tagalog/Taglish care terms are normalized. Minibatch SGD uses validation-loss early stopping and saves the best checkpoint; the validation set is then used for confidence calibration and for choosing when a confident model prediction should override keyword routing. The model, vocabularies, configuration, split indices, per-intent classification report, routing metrics, and English/Tagalog/Taglish smoke-test results are saved alongside the evaluation report. The default batch size is 32, maximum epoch count is 50, learning rate is 0.05, regularization alpha is 1e-5, and patience is 5; these CPU-friendly settings avoid downloading a large pretrained model. Do not treat metrics on synthetic training phrases as production accuracy: evaluate on independently collected, consented user utterances and multi-turn conversations before deployment.
-=======
-python train_intent_classifier.py --data intent_training_data.csv --output-dir models/stevia-intent-bert --epochs 8 --batch-size 8 --learning-rate 2e-5 --patience 2 --seed 42
-```
-
-Training fine-tunes the complete BERT model, uses a stratified 70/15/15 train/validation/test split, groups highly similar same-intent phrases to reduce split leakage, and stops when validation loss does not improve. The validation set is used for confidence calibration and for choosing when a confident model prediction should override keyword routing. The report includes both classifier-only metrics and end-to-end intent-routing metrics. Do not treat metrics on synthetic training phrases as production accuracy: evaluate on independently collected, consented user utterances and multi-turn conversations before deployment.
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
+Training uses a grouped, stratified 70/15/15 train/validation/test split to reduce split leakage. The multilingual character and word n-gram vocabularies are learned from the training set only, after common Tagalog/Taglish terms are normalized. Minibatch SGD uses validation-loss early stopping and saves the best checkpoint; the validation set is then used for confidence calibration and for choosing when a confident model prediction should override keyword routing. The model, vocabularies, configuration, split indices, per-intent classification report, routing metrics, and English/Tagalog/Taglish smoke-test results—including device-control scores—are saved alongside the evaluation report. The recommended batch size is 16, maximum epoch count is 50, learning rate is 0.05, regularization alpha is 1e-5, and patience is 7; these CPU-friendly settings avoid downloading a large pretrained model. Do not treat metrics on synthetic training phrases as production accuracy: evaluate on independently collected, consented user utterances and multi-turn conversations before deployment.
 
 ## FastAPI mobile API
 
@@ -70,11 +61,7 @@ Send a JSON `POST` to `http://<server-address>:8000/api/chat` with the same `mes
 
 ## Uploaded knowledge
 
-<<<<<<< HEAD
 The included `sprout_knowledge_base.json` is loaded at startup as the primary SPROUT knowledge source. It contains the Stevia parameters, valid ranges, classifications, interpretations, recommendations, and sources. Normal answers for soil pH, temperature, humidity, light, and watering are generated from these JSON records. `sprout_knowledge_base.csv` is supported as a fallback if the JSON file is unavailable. The intent classifier identifies the question topic; the chatbot then retrieves the relevant uploaded knowledge and uses it to explain the answer or a sensor reading.
-=======
-The included `sprout_knowledge_base.json` is loaded at startup as the primary SPROUT knowledge source. It contains the Stevia parameters, valid ranges, classifications, interpretations, recommendations, and sources. Normal answers for soil pH, temperature, humidity, light, and watering are generated from these JSON records. `sprout_knowledge_base.csv` is supported as a fallback if the JSON file is unavailable. BERT identifies the question topic; the chatbot then retrieves the relevant uploaded knowledge and uses it to explain the answer or a sensor reading.
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 
 For example, sending `{"temperature": 32}` with a temperature question returns the uploaded `heat_stress` classification and its recommended shading, ventilation, and irrigation action.
 
@@ -126,11 +113,7 @@ Sensor integration is intentionally not required. The chatbot service already re
 
 - `app.py` - Flask routes and application entry point
 - `stevia_bot/knowledge_base.py` - editable Stevia facts and suggested questions
-<<<<<<< HEAD
 - `stevia_bot/chatbot.py` - local intent classification, fallback matching, and sensor boundary
-=======
-- `stevia_bot/chatbot.py` - fine-tuned BERT intent classification, fallback matching, and sensor boundary
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 - `stevia_bot/iot_data.py` - sensor_readings Excel loader with CSV fallback and reading normalization
 - `sensor_readings/` - individual Excel files for each sensor parameter
 - `templates/index.html` - chat interface

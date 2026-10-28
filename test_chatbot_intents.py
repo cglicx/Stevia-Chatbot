@@ -1,5 +1,5 @@
-<<<<<<< HEAD
 import csv
+import re
 import tempfile
 import unittest
 from collections import Counter
@@ -14,18 +14,94 @@ from sklearn.pipeline import Pipeline
 
 from stevia_bot.chatbot import SteviaChatbot
 from stevia_bot.intent_text import normalize_intent_text
-=======
-import unittest
-from types import SimpleNamespace
-from unittest.mock import patch
-
-from stevia_bot.chatbot import SteviaChatbot
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 from train_intent_classifier import split_indices
 
 
 class ChatbotIntentTests(unittest.TestCase):
-<<<<<<< HEAD
+    def test_device_open_commands_request_confirmation(self):
+        chatbot = SteviaChatbot()
+
+        for request, device in (
+            ("open fan", "fan"),
+            ("open lights", "light"),
+            ("open sprinkler", "pump"),
+            ("turn on the fan", "fan"),
+        ):
+            with self.subTest(request=request):
+                result = chatbot.answer(request)
+
+                self.assertEqual(result["intent"], "device_control")
+                self.assertEqual(
+                    result["device_command"],
+                    {"device": device, "action": "ON"},
+                )
+                self.assertTrue(result["confirmation"]["required"])
+                self.assertEqual(
+                    [option["label"] for option in result["confirmation"]["options"]],
+                    ["Yes", "No"],
+                )
+
+    def test_device_question_does_not_send_a_command_prompt(self):
+        result = SteviaChatbot().answer("Should I open the fan?")
+
+        self.assertNotEqual(result["intent"], "device_control")
+
+    def test_tagalog_and_taglish_device_commands_request_confirmation(self):
+        chatbot = SteviaChatbot()
+
+        for request, device, action in (
+            ("Buksan ang bentilador", "fan", "ON"),
+            ("Patayin ang bentilador", "fan", "OFF"),
+            ("Buksan ang mga ilaw", "light", "ON"),
+            ("Patayin ang ilaw", "light", "OFF"),
+            ("Paandarin ang bomba", "pump", "ON"),
+            ("Patayin ang pandilig", "pump", "OFF"),
+            ("Paki-open yung fan", "fan", "ON"),
+            ("I-off mo yung fan", "fan", "OFF"),
+            ("Paandarin yung lights", "light", "ON"),
+            ("Patayin yung sprinkler", "pump", "OFF"),
+        ):
+            with self.subTest(request=request):
+                result = chatbot.answer(request)
+
+                self.assertEqual(result["intent"], "device_control")
+                self.assertEqual(
+                    result["device_command"],
+                    {"device": device, "action": action},
+                )
+                self.assertTrue(result["confirmation"]["required"])
+                self.assertEqual(
+                    [option["label"] for option in result["confirmation"]["options"]],
+                    ["Yes", "No"],
+                )
+
+    def test_tagalog_negation_and_advice_are_not_device_commands(self):
+        chatbot = SteviaChatbot()
+
+        for request in ("Huwag buksan ang fan", "Dapat ko bang buksan ang ilaw?"):
+            with self.subTest(request=request):
+                self.assertNotEqual(
+                    chatbot.answer(request)["intent"],
+                    "device_control",
+                )
+
+    def test_device_control_training_phrases_match_command_intent(self):
+        dataset_path = Path(__file__).resolve().parent / "intent_training_data.csv"
+        chatbot = SteviaChatbot()
+        with dataset_path.open(encoding="utf-8-sig", newline="") as dataset_file:
+            requests = [
+                row["text"]
+                for row in csv.DictReader(dataset_file)
+                if row["intent"] == "device_control"
+            ]
+
+        for request in requests:
+            with self.subTest(request=request):
+                self.assertEqual(
+                    chatbot.answer(request)["intent"],
+                    "device_control",
+                )
+
     def test_intent_features_normalize_common_tagalog_care_terms(self):
         self.assertEqual(
             normalize_intent_text("Bakit naninilaw ang dahon ng Stevia?"),
@@ -35,6 +111,10 @@ class ChatbotIntentTests(unittest.TestCase):
             normalize_intent_text("Paano magtanim ng Stevia sa paso?"),
             "how grow stevia in paso",
         )
+        self.assertEqual(
+            normalize_intent_text("Patayin ang ilaw."),
+            "turn off lights",
+        )
 
     def test_tagalog_and_taglish_training_examples_are_balanced_by_topic(self):
         dataset_path = Path(__file__).resolve().parent / "intent_training_data.csv"
@@ -43,14 +123,37 @@ class ChatbotIntentTests(unittest.TestCase):
 
         topic_counts = [
             count for intent, count in counts.items()
-            if intent != "sensor_records"
+            if intent not in {"sensor_records", "device_control"}
         ]
         self.assertTrue(all(120 <= count <= 126 for count in topic_counts))
         self.assertLessEqual(max(topic_counts) - min(topic_counts), 4)
         self.assertEqual(counts["sensor_records"], 78)
+        self.assertGreaterEqual(counts["device_control"], 120)
 
-=======
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
+        with dataset_path.open(encoding="utf-8-sig", newline="") as dataset_file:
+            device_phrases = [
+                row["text"]
+                for row in csv.DictReader(dataset_file)
+                if row["intent"] == "device_control"
+            ]
+        tagalog_phrases = [
+            phrase for phrase in device_phrases
+            if re.search(
+                r"\b(buksan|paandarin|patayin|sindihan|isara|ihinto|bentilador|"
+                r"ilaw|bomba|pandilig)\b",
+                phrase.casefold(),
+            )
+        ]
+        taglish_phrases = [
+            phrase for phrase in device_phrases
+            if re.search(
+                r"\b(yung|mo|natin|paki|please|ba|na)\b",
+                phrase.casefold(),
+            )
+        ]
+        self.assertGreaterEqual(len(tagalog_phrases), 40)
+        self.assertGreaterEqual(len(taglish_phrases), 40)
+
     def test_training_split_keeps_similar_phrasing_in_one_partition(self):
         texts = [
             "What was the highest humidity today?",
@@ -345,11 +448,7 @@ class ChatbotIntentTests(unittest.TestCase):
             intent, source = chatbot._select_intent("How do I care for my plant?")
 
         self.assertEqual(intent, "watering")
-<<<<<<< HEAD
         self.assertEqual(source, "intent classifier")
-=======
-        self.assertEqual(source, "fine-tuned classifier")
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
 
     def test_low_confidence_model_defers_to_keyword_routing(self):
         chatbot = SteviaChatbot()
@@ -401,7 +500,6 @@ class ChatbotIntentTests(unittest.TestCase):
             torch.softmax(torch.tensor([1.0, 0.0]), dim=-1)[0].item(),
         )
 
-<<<<<<< HEAD
     def test_loads_saved_tfidf_intent_classifier(self):
         training_texts = [
             "How often should I water Stevia?",
@@ -428,8 +526,6 @@ class ChatbotIntentTests(unittest.TestCase):
         self.assertGreater(scores["watering"], scores["sunlight"])
         self.assertAlmostEqual(sum(scores.values()), 1.0)
 
-=======
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     def test_sensor_question_returns_only_current_snapshot(self):
         chatbot = SteviaChatbot()
         readings = {
@@ -450,7 +546,6 @@ class ChatbotIntentTests(unittest.TestCase):
         self.assertIn("water level 64.05%", result["answer"])
         self.assertNotIn("soil-moisture classifications", result["answer"])
 
-<<<<<<< HEAD
     def test_sensor_based_watering_question_returns_grounded_recommendation(self):
         chatbot = SteviaChatbot()
         readings = {
@@ -578,8 +673,6 @@ class ChatbotIntentTests(unittest.TestCase):
         self.assertFalse(SteviaChatbot._contains_tagalog("Does my plant need water?"))
         self.assertFalse(SteviaChatbot._contains_tagalog("What temp should Stevia be kept at?"))
 
-=======
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     def test_sensor_based_plant_problem_question_assesses_readings(self):
         chatbot = SteviaChatbot()
         readings = {
@@ -694,7 +787,6 @@ class ChatbotIntentTests(unittest.TestCase):
         self.assertEqual(result["intent"], "sensor_records")
         self.assertEqual(result["sensor_records"], records[3:6])
 
-<<<<<<< HEAD
     def test_next_few_days_watering_advice_is_not_misread_as_next_page(self):
         chatbot = SteviaChatbot()
         question = (
@@ -730,8 +822,6 @@ class ChatbotIntentTests(unittest.TestCase):
         self.assertIn("cannot reliably determine whether to irrigate", result["answer"])
         self.assertIn("95%", result["answer"])
 
-=======
->>>>>>> 186cd39e424c87e5968dfb615c47a51e44355bd6
     def test_table_follow_up_reuses_previous_sensor_record_selection(self):
         chatbot = SteviaChatbot()
         records = [
