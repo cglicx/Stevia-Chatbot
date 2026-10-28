@@ -29,13 +29,7 @@ The trained classifier and its TF-IDF vocabularies are included in `models/stevi
 
 The chatbot also recognizes common Tagalog and Taglish Stevia-care terms and questions, routes them through the same care and sensor rules, and responds in Tagalog or casual Taglish with a light, friendly tone when Filipino wording is detected. The intent-training CSV includes roughly 40-42 Tagalog and Taglish examples for each main care topic (26 each for sensor records), alongside the English examples, for future model retraining. This is a rule-based vocabulary and response set, not general-purpose translation.
 
-Device requests in English, Tagalog, and Taglish (for example, "open fan," "buksan ang bentilador," "i-off mo yung fan," and "patayin ang ilaw") prompt for confirmation before sending a command. These phrases are also included under the `device_control` intent in the training CSV. The Yes button sends a confirmed command to `POST /api/device-command`; No sends nothing. That endpoint forwards JSON with a canonical `device` (`light`, `fan`, or `pump`) and `action` (`ON` or `OFF`) to the PHP backend's `POST device-control` route; "sprinkler" maps to `pump`. Configure the backend URL as an environment variable, including the front controller query parameter, for example:
-
-```powershell
-$env:DEVICE_CONTROL_API_URL = "http://192.168.1.20/Capstone/Backend/?url=device-control"
-```
-
-The configured backend should return a JSON response with `"success": true` and an optional `message`. Do not expose this unauthenticated device-control endpoint beyond a trusted network.
+Device requests in English, Tagalog, and Taglish (for example, "open fan," "buksan ang bentilador," "i-off mo yung fan," and "patayin ang ilaw") prompt for confirmation before sending a command. These phrases are also included under the `device_control` intent in the training CSV. The Yes button or a typed affirmative reply sends the confirmed command; No sends nothing. Commands go to `POST /api/device-command`, which forwards canonical `device` (`light`, `fan`, or `pump`) and `action` (`ON` or `OFF`) values to the hardcoded PHP `device-control` URL in `stevia_bot/device_control.py`. After the command is accepted, the chatbot checks the PHP `device-status` route and reports the latest `actual_state`; it does not claim the device is on if that state has not been reported or still differs from the requested state. "Sprinkler" maps to `pump`. Do not expose this unauthenticated device-control endpoint beyond a trusted network.
 
 ## Retraining and evaluation
 

@@ -1,8 +1,14 @@
 import json
-import os
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from typing import Any
+
+DEVICE_CONTROL_API_URL = (
+    "http://192.168.1.20/Capstone/Backend/?url=device-control"
+)
+DEVICE_STATUS_API_URL = (
+    "http://192.168.1.20/Capstone/Backend/?url=device-status"
+)
 
 
 class DeviceControlError(Exception):
@@ -12,16 +18,9 @@ class DeviceControlError(Exception):
 
 
 def send_device_command(device: str, action: str) -> dict[str, Any]:
-    endpoint = os.getenv("DEVICE_CONTROL_API_URL", "").strip()
-    if not endpoint:
-        raise DeviceControlError(
-            "Device control is not configured. Set DEVICE_CONTROL_API_URL.",
-            status_code=503,
-        )
-
     body = json.dumps({"device": device, "action": action}).encode("utf-8")
     request = Request(
-        endpoint,
+        DEVICE_CONTROL_API_URL,
         data=body,
         headers={"Content-Type": "application/json"},
         method="POST",
@@ -50,9 +49,53 @@ def send_device_command(device: str, action: str) -> dict[str, Any]:
             message = "Device backend could not execute the command."
         raise DeviceControlError(message)
 
+    device_labels = {"light": "lights", "fan": "fan", "pump": "pump"}
+    label = device_labels[device]
+    try:
+        status_request = Request(DEVICE_STATUS_API_URL, method="GET")
+        with urlopen(status_request, timeout=10) as response:
+            status_result = json.loads(response.read())
+    except (HTTPError, TimeoutError, URLError, UnicodeDecodeError, json.JSONDecodeError):
+        status_result = None
+
+    reported_state = None
+    if isinstance(status_result, dict) and status_result.get("success") is True:
+        devices = status_result.get("devices")
+        if isinstance(devices, list):
+            reported_device = next(
+                (
+                    item
+                    for item in devices
+                    if isinstance(item, dict) and item.get("device_name") == device
+                ),
+                None,
+            )
+            if reported_device is not None:
+                state = reported_device.get("actual_state")
+                if isinstance(state, str) and state.upper() in {"ON", "OFF"}:
+                    reported_state = state.upper()
+
+    if reported_state == action:
+        message = f"The {label} is {reported_state} according to the latest device report."
+    elif reported_state is not None:
+        message = (
+            f"The {label} command was accepted, but its latest reported state is "
+            f"{reported_state}."
+        )
+    elif status_result is None:
+        message = (
+            f"The {label} command was accepted, but I couldn't verify its current state."
+        )
+    else:
+        message = (
+            f"The {label} command was accepted, but its current state has not been "
+            "reported yet."
+        )
+
     return {
         "success": True,
         "device": device,
         "action": action,
-        "message": backend_result.get("message", "Device command sent."),
+        "reported_state": reported_state,
+        "message": message,
     }

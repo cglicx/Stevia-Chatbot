@@ -38,11 +38,27 @@ def chat(payload: ChatRequest) -> dict[str, Any]:
         if payload.history is not None
         else None
     )
-    return chatbot.answer(
+    result = chatbot.answer(
         question,
         sensor_data=payload.sensor_data,
         history=history,
     )
+    if result.get("execute_device_command") is True:
+        command = result["device_command"]
+        try:
+            device_result = send_device_command(
+                command["device"],
+                command["action"],
+            )
+        except DeviceControlError as error:
+            raise HTTPException(
+                status_code=error.status_code,
+                detail=str(error),
+            ) from error
+        result["answer"] = device_result["message"]
+        result["device_result"] = device_result
+        result.pop("execute_device_command")
+    return result
 
 
 @app.post("/api/device-command")

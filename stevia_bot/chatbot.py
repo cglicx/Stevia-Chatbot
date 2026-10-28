@@ -730,6 +730,76 @@ class SteviaChatbot:
 
         return {"device": device, "action": action}
 
+    @classmethod
+    def _pending_device_confirmation(
+        cls,
+        history: list[dict[str, Any]] | None,
+    ) -> dict[str, str] | None:
+        if not isinstance(history, list):
+            return None
+
+        assistant_index = next(
+            (
+                index
+                for index in range(len(history) - 1, -1, -1)
+                if isinstance(history[index], dict)
+                and history[index].get("role") == "assistant"
+            ),
+            None,
+        )
+        if assistant_index is None:
+            return None
+
+        previous_user = next(
+            (
+                str(entry.get("content", ""))
+                for entry in reversed(history[:assistant_index])
+                if isinstance(entry, dict) and entry.get("role") == "user"
+            ),
+            None,
+        )
+        if not previous_user:
+            return None
+
+        assistant_text = str(history[assistant_index].get("content", "")).strip()
+        confirmation_patterns = (
+            (
+                r"Would you like me to turn (on|off) the "
+                r"(lights?|fan|sprinkler|pump)\?",
+                {"on": "ON", "off": "OFF"},
+            ),
+            (
+                r"Gusto mo bang (buksan|patayin) ang "
+                r"(ilaw|bentilador|sprinkler|bomba)\?",
+                {"buksan": "ON", "patayin": "OFF"},
+            ),
+            (
+                r"I-(on|off) ang (ilaw|bentilador|sprinkler|bomba)\?",
+                {"on": "ON", "off": "OFF"},
+            ),
+        )
+        prompt_command = None
+        prompted_label = ""
+        for pattern, action_map in confirmation_patterns:
+            match = re.fullmatch(pattern, assistant_text, re.IGNORECASE)
+            if match:
+                prompted_action = action_map[match.group(1).casefold()]
+                prompted_device = cls.DEVICE_ALIASES[match.group(2).casefold()]
+                prompted_label = match.group(2).casefold()
+                prompt_command = {
+                    "device": prompted_device,
+                    "action": prompted_action,
+                }
+                break
+
+        if prompt_command is None:
+            return None
+
+        normalized_request = cls._normalize_tagalog_question(previous_user)
+        if cls._device_command(normalized_request) != prompt_command:
+            return None
+        return {**prompt_command, "label": prompted_label}
+
     def answer(
         self,
         question: str,
@@ -789,6 +859,40 @@ class SteviaChatbot:
                 source,
                 sensor_data,
                 sensor_records=sensor_records,
+            )
+
+        pending_device_command = self._pending_device_confirmation(history)
+        confirmation_reply = question.strip().casefold()
+        if pending_device_command and confirmation_reply in {
+            "yes", "y", "yeah", "yep", "sure", "go ahead", "confirm",
+            "oo", "opo", "sige", "tama",
+        }:
+            device_name = pending_device_command["label"]
+            action_label = "on" if pending_device_command["action"] == "ON" else "off"
+            result = respond(
+                f"Confirmed. Sending the command to turn the {device_name} {action_label}.",
+                "Device control",
+                "device_control",
+                "device confirmation",
+                combined_sensor_data,
+            )
+            result["device_command"] = {
+                "device": pending_device_command["device"],
+                "action": pending_device_command["action"],
+            }
+            result["execute_device_command"] = True
+            return result
+        if pending_device_command and confirmation_reply in {
+            "no", "n", "nope", "cancel", "cancel it", "hindi", "hindi po", "ayaw",
+        }:
+            return respond(
+                "Sige, nakansela. Walang device command na ipinadala."
+                if tagalog_response
+                else "Cancelled. No device command was sent.",
+                "Device control",
+                "device_control",
+                "device confirmation",
+                combined_sensor_data,
             )
 
         device_command = self._device_command(question)
@@ -1069,6 +1173,8 @@ class SteviaChatbot:
 
     @staticmethod
     def _taglish_style(answer: str, intent: str) -> str:
+        if intent == "device_control":
+            return answer
         starters = {
             "sensor": "Quick sensor check: ",
             "sensor_records": "Quick records check: ",
@@ -1094,6 +1200,22 @@ class SteviaChatbot:
         sensor_data: dict[str, Any],
         sensor_records: list[dict[str, Any]] | None = None,
     ) -> str:
+        if intent == "device_control":
+            prompt_match = re.fullmatch(
+                r"Would you like me to turn (on|off) the "
+                r"(lights?|fan|sprinkler|pump)\?",
+                english_answer,
+                re.IGNORECASE,
+            )
+            if prompt_match:
+                action = "buksan" if prompt_match.group(1).casefold() == "on" else "patayin"
+                device = prompt_match.group(2).casefold()
+                if device in {"light", "lights"}:
+                    device = "ilaw"
+                return f"Gusto mo bang {action} ang {device}?"
+            if english_answer.startswith("Cancelled."):
+                return "Sige, nakansela. Walang device command na ipinadala."
+            return english_answer
         if intent == "out_of_scope":
             return "Pasensya na, tungkol lamang sa pag-aalaga ng Stevia ang kaya kong sagutin."
         if intent == "typo_clarification":

@@ -85,6 +85,45 @@ class ChatbotIntentTests(unittest.TestCase):
                     "device_control",
                 )
 
+    def test_yes_confirms_device_command_and_no_cancels_it(self):
+        chatbot = SteviaChatbot()
+        pending = [
+            {"role": "user", "content": "open fan"},
+            {
+                "role": "assistant",
+                "content": "Would you like me to turn on the fan?",
+            },
+        ]
+
+        confirmed = chatbot.answer("Yes", history=pending)
+        cancelled = chatbot.answer("No", history=pending)
+
+        self.assertEqual(confirmed["intent"], "device_control")
+        self.assertTrue(confirmed["execute_device_command"])
+        self.assertEqual(
+            confirmed["device_command"],
+            {"device": "fan", "action": "ON"},
+        )
+        self.assertIn("Cancelled", cancelled["answer"])
+        self.assertNotIn("execute_device_command", cancelled)
+
+    def test_tagalog_device_confirmation_is_recognized(self):
+        chatbot = SteviaChatbot()
+        prompt = chatbot.answer("Buksan ang bentilador.")
+        confirmed = chatbot.answer(
+            "Oo",
+            history=[
+                {"role": "user", "content": "Buksan ang bentilador."},
+                {"role": "assistant", "content": prompt["answer"]},
+            ],
+        )
+
+        self.assertTrue(confirmed["execute_device_command"])
+        self.assertEqual(
+            confirmed["device_command"],
+            {"device": "fan", "action": "ON"},
+        )
+
     def test_device_control_training_phrases_match_command_intent(self):
         dataset_path = Path(__file__).resolve().parent / "intent_training_data.csv"
         chatbot = SteviaChatbot()

@@ -30,6 +30,18 @@ def chat():
         return jsonify({"error": "Please enter a question."}), 400
 
     result = chatbot.answer(question, sensor_data=sensor_data, history=history)
+    if result.get("execute_device_command") is True:
+        command = result["device_command"]
+        try:
+            device_result = send_device_command(
+                command["device"],
+                command["action"],
+            )
+        except DeviceControlError as error:
+            return jsonify({"error": str(error)}), error.status_code
+        result["answer"] = device_result["message"]
+        result["device_result"] = device_result
+        result.pop("execute_device_command")
     return jsonify(result)
 
 
