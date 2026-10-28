@@ -107,6 +107,18 @@ class ChatbotIntentTests(unittest.TestCase):
         self.assertIn("Cancelled", cancelled["answer"])
         self.assertNotIn("execute_device_command", cancelled)
 
+    def test_yes_reply_can_use_explicit_device_context_without_history(self):
+        result = SteviaChatbot().answer(
+            "Yes",
+            pending_device_context={"device": "light", "action": "ON"},
+        )
+
+        self.assertTrue(result["execute_device_command"])
+        self.assertEqual(
+            result["device_command"],
+            {"device": "light", "action": "ON"},
+        )
+
     def test_tagalog_device_confirmation_is_recognized(self):
         chatbot = SteviaChatbot()
         prompt = chatbot.answer("Buksan ang bentilador.")

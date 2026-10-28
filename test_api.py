@@ -194,6 +194,33 @@ class ChatApiTests(unittest.TestCase):
         self.assertEqual(response.get_json()["success"], True)
         send_command.assert_called_once_with("fan", "ON")
 
+    def test_chat_yes_reply_executes_explicit_pending_device_context(self):
+        with patch(
+            "app.send_device_command",
+            return_value={
+                "success": True,
+                "device": "fan",
+                "action": "ON",
+                "reported_state": "ON",
+                "message": "The fan is ON according to the latest device report.",
+            },
+        ) as send_command:
+            response = self.client.post(
+                "/api/chat",
+                json={
+                    "message": "Yes",
+                    "pending_device_command": {"device": "fan", "action": "ON"},
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["intent"], "device_control")
+        self.assertEqual(
+            response.get_json()["answer"],
+            "The fan is ON according to the latest device report.",
+        )
+        send_command.assert_called_once_with("fan", "ON")
+
     def test_invalid_device_command_is_rejected(self):
         response = self.client.post(
             "/api/device-command",

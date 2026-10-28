@@ -103,21 +103,21 @@ function addDeviceConfirmation(container, data) {
     button.type = 'button';
     button.textContent = option.label;
     button.addEventListener('click', () => {
-      handleDeviceConfirmation(controls, option.value);
+      handleDeviceConfirmation(controls, data.device_command, option.value);
     });
     controls.appendChild(button);
   });
   container.appendChild(controls);
 }
 
-function handleDeviceConfirmation(controls, choice) {
+function handleDeviceConfirmation(controls, command, choice) {
   controls.querySelectorAll('button').forEach((item) => {
     item.disabled = true;
   });
-  ask(choice === 'yes' ? 'Yes' : 'No');
+  ask(choice === 'yes' ? 'Yes' : 'No', command);
 }
 
-async function ask(question) {
+async function ask(question, pendingDeviceCommand = null) {
   addMessage(question, 'user');
   conversation.push({ role: 'user', content: question });
   const pending = addMessage('Thinking through the plant notes...', 'bot', 'BERT · matching topic');
@@ -126,7 +126,11 @@ async function ask(question) {
   try {
     const response = await fetch('/api/chat', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ message: question, history: conversation.slice(-8) }),
+      body: JSON.stringify({
+        message: question,
+        history: conversation.slice(-8),
+        ...(pendingDeviceCommand ? { pending_device_command: pendingDeviceCommand } : {}),
+      }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Unable to answer right now.');

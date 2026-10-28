@@ -51,6 +51,8 @@ def send_device_command(device: str, action: str) -> dict[str, Any]:
 
     device_labels = {"light": "lights", "fan": "fan", "pump": "pump"}
     label = device_labels[device]
+    device_subject = f"The {label}"
+    state_verb = "are" if device == "light" else "is"
     try:
         status_request = Request(DEVICE_STATUS_API_URL, method="GET")
         with urlopen(status_request, timeout=10) as response:
@@ -76,7 +78,10 @@ def send_device_command(device: str, action: str) -> dict[str, Any]:
                     reported_state = state.upper()
 
     if reported_state == action:
-        message = f"The {label} is {reported_state} according to the latest device report."
+        message = (
+            f"{device_subject} {state_verb} {reported_state} "
+            "according to the latest device report."
+        )
     elif reported_state is not None:
         message = (
             f"The {label} command was accepted, but its latest reported state is "

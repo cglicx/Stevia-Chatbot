@@ -99,6 +99,20 @@ The browser also sends the last few turns as `history`, allowing short follow-up
 }
 ```
 
+For mobile clients, a device confirmation can also include the `device_command` object returned by the initial `/api/chat` response. Send that object as `pending_device_command` with the user's reply so confirmation works even if the app does not resend conversation history:
+
+```json
+{
+  "message": "Yes",
+  "pending_device_command": {
+    "device": "light",
+    "action": "ON"
+  }
+}
+```
+
+Only an affirmative reply executes the pending command; `"No"` cancels it. The mobile app should retain the returned `device_command` until the user chooses an option, pass it with the confirmation message, then append the returned answer as the assistant's next chat turn. The web client already follows this flow.
+
 Each knowledge-base topic has multiple answer variants. The chatbot checks recent assistant messages and selects an unused variant, changing the structure between direct guidance, a checklist or range summary, and troubleshooting advice. After all variants for a topic have been used, it cycles back to the first grounded answer.
 
 Sensor integration is intentionally not required. The chatbot service already receives optional readings and adds relevant context for watering, temperature, humidity, and light questions. A future IoT adapter can call this API or populate the same dictionary from MQTT, serial, or an HTTP device service.

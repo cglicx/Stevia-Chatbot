@@ -25,11 +25,25 @@ def chat():
     question = str(payload.get("message", "")).strip()
     sensor_data = payload.get("sensor_data")
     history = payload.get("history")
+    pending_device_command = payload.get("pending_device_command")
 
     if not question:
         return jsonify({"error": "Please enter a question."}), 400
+    if pending_device_command is not None and (
+        not isinstance(pending_device_command, dict)
+        or not isinstance(pending_device_command.get("device"), str)
+        or pending_device_command.get("device") not in {"light", "fan", "pump"}
+        or not isinstance(pending_device_command.get("action"), str)
+        or pending_device_command.get("action") not in {"ON", "OFF"}
+    ):
+        return jsonify({"error": "Invalid pending device command."}), 400
 
-    result = chatbot.answer(question, sensor_data=sensor_data, history=history)
+    result = chatbot.answer(
+        question,
+        sensor_data=sensor_data,
+        history=history,
+        pending_device_context=pending_device_command,
+    )
     if result.get("execute_device_command") is True:
         command = result["device_command"]
         try:

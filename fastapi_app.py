@@ -15,15 +15,19 @@ class ChatTurn(BaseModel):
     content: str
 
 
+class PendingDeviceCommand(BaseModel):
+    device: Literal["light", "fan", "pump"]
+    action: Literal["ON", "OFF"]
+
+
 class ChatRequest(BaseModel):
     message: str
     sensor_data: dict[str, Any] | None = None
     history: list[ChatTurn] | None = None
+    pending_device_command: PendingDeviceCommand | None = None
 
 
-class DeviceCommandRequest(BaseModel):
-    device: Literal["light", "fan", "pump"]
-    action: Literal["ON", "OFF"]
+class DeviceCommandRequest(PendingDeviceCommand):
     confirmed: bool
 
 
@@ -42,6 +46,11 @@ def chat(payload: ChatRequest) -> dict[str, Any]:
         question,
         sensor_data=payload.sensor_data,
         history=history,
+        pending_device_context=(
+            payload.pending_device_command.model_dump()
+            if payload.pending_device_command is not None
+            else None
+        ),
     )
     if result.get("execute_device_command") is True:
         command = result["device_command"]

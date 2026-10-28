@@ -74,6 +74,25 @@ class DeviceControlTests(unittest.TestCase):
         self.assertEqual(result["reported_state"], "OFF")
         self.assertIn("latest reported state is OFF", result["message"])
 
+    def test_confirmed_light_state_uses_plural_response(self):
+        command_response = self.backend_response({"success": True})
+        status_response = self.backend_response({
+            "success": True,
+            "devices": [
+                {"device_name": "light", "desired_state": "ON", "actual_state": "ON"},
+            ],
+        })
+        with patch(
+            "stevia_bot.device_control.urlopen",
+            side_effect=[command_response, status_response],
+        ):
+            result = send_device_command("light", "ON")
+
+        self.assertEqual(
+            result["message"],
+            "The lights are ON according to the latest device report.",
+        )
+
     def test_backend_failure_is_not_reported_as_success(self):
         response = MagicMock()
         response.__enter__.return_value.read.return_value = (

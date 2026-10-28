@@ -805,6 +805,7 @@ class SteviaChatbot:
         question: str,
         sensor_data: dict[str, Any] | None = None,
         history: list[dict[str, Any]] | None = None,
+        pending_device_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         manual_sensor_data = sensor_data if isinstance(sensor_data, dict) else {}
         combined_sensor_data = {**LATEST_READING, **manual_sensor_data}
@@ -862,6 +863,24 @@ class SteviaChatbot:
             )
 
         pending_device_command = self._pending_device_confirmation(history)
+        if pending_device_command is None and isinstance(pending_device_context, dict):
+            context_device = pending_device_context.get("device")
+            context_action = pending_device_context.get("action")
+            if (
+                isinstance(context_device, str)
+                and context_device in {"light", "fan", "pump"}
+                and isinstance(context_action, str)
+                and context_action in {"ON", "OFF"}
+            ):
+                pending_device_command = {
+                    "device": context_device,
+                    "action": context_action,
+                    "label": {
+                        "light": "lights",
+                        "fan": "fan",
+                        "pump": "pump",
+                    }[context_device],
+                }
         confirmation_reply = question.strip().casefold()
         if pending_device_command and confirmation_reply in {
             "yes", "y", "yeah", "yep", "sure", "go ahead", "confirm",

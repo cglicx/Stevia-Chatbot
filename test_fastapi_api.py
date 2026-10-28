@@ -81,6 +81,46 @@ class FastApiDeviceCommandTests(unittest.TestCase):
         self.assertIn("Cancelled", response.json()["answer"])
         send_command.assert_not_called()
 
+    def test_chat_yes_reply_executes_device_with_explicit_context(self):
+        with patch(
+            "fastapi_app.send_device_command",
+            return_value={
+                "success": True,
+                "device": "light",
+                "action": "ON",
+                "reported_state": "ON",
+                "message": "The lights are ON according to the latest device report.",
+            },
+        ) as send_command:
+            response = self.client.post(
+                "/api/chat",
+                json={
+                    "message": "Yes",
+                    "pending_device_command": {"device": "light", "action": "ON"},
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["answer"],
+            "The lights are ON according to the latest device report.",
+        )
+        send_command.assert_called_once_with("light", "ON")
+
+    def test_chat_no_reply_with_explicit_context_does_not_execute_device(self):
+        with patch("fastapi_app.send_device_command") as send_command:
+            response = self.client.post(
+                "/api/chat",
+                json={
+                    "message": "No",
+                    "pending_device_command": {"device": "fan", "action": "ON"},
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Cancelled", response.json()["answer"])
+        send_command.assert_not_called()
+
     def test_device_command_is_forwarded_only_after_confirmation(self):
         with patch(
             "fastapi_app.send_device_command",
