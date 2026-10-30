@@ -29,7 +29,7 @@ The trained classifier and its TF-IDF vocabularies are included in `models/stevi
 
 The chatbot also recognizes common Tagalog and Taglish Stevia-care terms and questions, routes them through the same care and sensor rules, and responds in Tagalog or casual Taglish with a light, friendly tone when Filipino wording is detected. The intent-training CSV includes roughly 40-42 Tagalog and Taglish examples for each main care topic (26 each for sensor records), alongside the English examples, for future model retraining. This is a rule-based vocabulary and response set, not general-purpose translation.
 
-Device requests in English, Tagalog, and Taglish (for example, "open fan," "buksan ang bentilador," "i-off mo yung fan," and "patayin ang ilaw") prompt for confirmation before sending a command. These phrases are also included under the `device_control` intent in the training CSV. The Yes button or a typed affirmative reply sends the confirmed command; No sends nothing. Commands go to `POST /api/device-command`, which forwards canonical `device` (`light`, `fan`, or `pump`) and `action` (`ON` or `OFF`) values to the hardcoded PHP `device-control` URL in `stevia_bot/device_control.py`. After the command is accepted, the chatbot checks the PHP `device-status` route and reports the latest `actual_state`; it does not claim the device is on if that state has not been reported or still differs from the requested state. "Sprinkler" maps to `pump`. Do not expose this unauthenticated device-control endpoint beyond a trusted network.
+Device requests in English, Tagalog, and Taglish (for example, "open fan," "buksan ang bentilador," "i-off mo yung fan," and "patayin ang ilaw") prompt for confirmation before sending a command. These phrases are also included under the `device_control` intent in the training CSV. The Yes button or a typed affirmative reply sends the confirmed command; No sends nothing. Commands go to `POST /api/device-command`, which forwards canonical `device` (`light`, `fan`, or `pump`) and `action` (`ON` or `OFF`) values to the configured backend. Set `DEVICE_CONTROL_API_URL` and `DEVICE_STATUS_API_URL` to backend URLs reachable from this service; there are no private-network defaults. Optionally set `DEVICE_BACKEND_TOKEN` if the backend accepts bearer-token authentication. "Sprinkler" maps to `pump`. Device control is unavailable until a reachable backend is configured.
 
 ## Retraining and evaluation
 
@@ -41,17 +41,19 @@ python train_intent_classifier.py --data intent_training_data.csv --output-dir m
 
 Training uses a grouped, stratified 70/15/15 train/validation/test split to reduce split leakage. The multilingual character and word n-gram vocabularies are learned from the training set only, after common Tagalog/Taglish terms are normalized. Minibatch SGD uses validation-loss early stopping and saves the best checkpoint; the validation set is then used for confidence calibration and for choosing when a confident model prediction should override keyword routing. The model, vocabularies, configuration, split indices, per-intent classification report, routing metrics, and English/Tagalog/Taglish smoke-test results—including device-control scores—are saved alongside the evaluation report. The recommended batch size is 16, maximum epoch count is 50, learning rate is 0.05, regularization alpha is 1e-5, and patience is 7; these CPU-friendly settings avoid downloading a large pretrained model. Do not treat metrics on synthetic training phrases as production accuracy: evaluate on independently collected, consented user utterances and multi-turn conversations before deployment.
 
-## FastAPI mobile API
+## FastAPI mobile API and Render deployment
 
-The FastAPI API can run alongside the Flask web interface. Install the requirements, then start it with:
+The mobile API is a separate service from the Flask browser interface. Run it locally with:
 
 ```powershell
 py -m uvicorn fastapi_app:app --host 0.0.0.0 --port 8000
 ```
 
-If PowerShell still reports that `uvicorn` is not recognized, use the Python launcher explicitly (`py -m uvicorn ...`) or activate the project virtual environment before running the command.
+The `render.yaml` Blueprint deploys the FastAPI service using `requirements-render.txt`, binds to Render's `$PORT`, and uses `/healthz` for health checks. In Render, the Blueprint generates a `CHATBOT_API_KEY` and sets `ENVIRONMENT=production`. Send the key with every API request as `Authorization: Bearer <CHATBOT_API_KEY>`; never commit it. Production startup fails if the key is missing or shorter than 32 characters. The health endpoint is public; `/api/*` routes require the key. A shared key packaged in a public mobile app can be extracted, so this is a basic access gate, not per-user authentication. For a public consumer release, integrate user authentication and verify user tokens on the API.
 
-Send a JSON `POST` to `http://<server-address>:8000/api/chat` with the same `message`, optional `sensor_data`, and optional `history` fields described below. For a phone on the same Wi-Fi, use the computer's LAN IP address and allow port `8000` through its firewall. For an Android emulator, the host computer is usually available at `10.0.2.2`. Do not use `localhost` from a physical phone. Deploy behind HTTPS and add authentication before exposing the API publicly.
+For local development, API authentication is optional unless `CHATBOT_API_KEY` is set. To configure browser-based clients, set `CORS_ORIGINS` to a comma-separated list of exact origins; native mobile apps do not normally need CORS.
+
+Send a JSON `POST` to `https://<your-render-service>.onrender.com/api/chat` with the same `message`, optional `sensor_data`, and optional `history` fields described below. Include the bearer token header on `/api/chat` and `/api/device-command`. A device-control request is forwarded only after confirmation, but its backend must be hosted somewhere Render can reach; a `192.168.x.x` address on your local network will not work. Set `DEVICE_CONTROL_API_URL` and `DEVICE_STATUS_API_URL` in the Render dashboard, and optionally `DEVICE_BACKEND_TOKEN`. If these URLs are not configured, device-control requests return HTTP 503 rather than silently pretending to work. Set `OPENAI_API_KEY` in Render only if you want to enable OpenAI-backed responses; the local classifier and deterministic fallback work without it.
 
 ## Uploaded knowledge
 

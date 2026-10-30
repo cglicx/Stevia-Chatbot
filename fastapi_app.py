@@ -1,13 +1,70 @@
+import hmac
+import os
 from typing import Any, Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from stevia_bot.chatbot import SteviaChatbot
 from stevia_bot.device_control import DeviceControlError, send_device_command
 
-app = FastAPI(title="Stevia Chatbot API")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").strip().lower()
+CHATBOT_API_KEY = os.getenv("CHATBOT_API_KEY", "").strip()
+if ENVIRONMENT == "production" and len(CHATBOT_API_KEY) < 32:
+    raise RuntimeError(
+        "Production requires CHATBOT_API_KEY to contain at least 32 characters."
+    )
+
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+app = FastAPI(
+    title="Stevia Chatbot API",
+    docs_url=None if ENVIRONMENT == "production" else "/docs",
+    redoc_url=None if ENVIRONMENT == "production" else "/redoc",
+    openapi_url=None if ENVIRONMENT == "production" else "/openapi.json",
+)
+if cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
 chatbot = SteviaChatbot()
+
+
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    if request.url.path.startswith("/api/") and request.method != "OPTIONS":
+        if not CHATBOT_API_KEY:
+            if ENVIRONMENT == "production":
+                return JSONResponse(
+                    status_code=503,
+                    content={"detail": "API authentication is not configured."},
+                )
+        else:
+            authorization = request.headers.get("Authorization", "")
+            scheme, _, supplied_key = authorization.partition(" ")
+            if (
+                scheme.casefold() != "bearer"
+                or not supplied_key
+                or not hmac.compare_digest(
+                    supplied_key.encode("utf-8"),
+                    CHATBOT_API_KEY.encode("utf-8"),
+                )
+            ):
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "A valid bearer token is required."},
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+    return await call_next(request)
 
 
 class ChatTurn(BaseModel):
@@ -23,9 +80,9 @@ class PendingDeviceCommand(BaseModel):
 class ChatRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    message: str
+    message: str = Field(max_length=2000)
     sensor_data: dict[str, Any] | None = None
-    history: list[ChatTurn] | None = None
+    history: list[ChatTurn] | None = Field(default=None, max_length=50)
     pending_device_command: PendingDeviceCommand | None = Field(
         default=None,
         alias="pendingDeviceCommand",
@@ -34,6 +91,11 @@ class ChatRequest(BaseModel):
 
 class DeviceCommandRequest(PendingDeviceCommand):
     confirmed: bool
+
+
+@app.get("/healthz")
+def health_check() -> dict[str, str]:
+    return {"status": "ok"}
 
 
 @app.post("/api/chat")

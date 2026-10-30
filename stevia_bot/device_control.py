@@ -1,14 +1,12 @@
 import json
+import os
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from typing import Any
 
-DEVICE_CONTROL_API_URL = (
-    "http://192.168.1.20/Capstone/Backend/?url=device-control"
-)
-DEVICE_STATUS_API_URL = (
-    "http://192.168.1.20/Capstone/Backend/?url=device-status"
-)
+DEVICE_CONTROL_API_URL = os.getenv("DEVICE_CONTROL_API_URL", "").strip() or None
+DEVICE_STATUS_API_URL = os.getenv("DEVICE_STATUS_API_URL", "").strip() or None
+DEVICE_BACKEND_TOKEN = os.getenv("DEVICE_BACKEND_TOKEN", "").strip()
 
 
 class DeviceControlError(Exception):
@@ -18,11 +16,19 @@ class DeviceControlError(Exception):
 
 
 def send_device_command(device: str, action: str) -> dict[str, Any]:
+    if not DEVICE_CONTROL_API_URL:
+        raise DeviceControlError(
+            "Device control is not configured on this server.", status_code=503
+        )
+
     body = json.dumps({"device": device, "action": action}).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if DEVICE_BACKEND_TOKEN:
+        headers["Authorization"] = f"Bearer {DEVICE_BACKEND_TOKEN}"
     request = Request(
         DEVICE_CONTROL_API_URL,
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     try:
@@ -53,12 +59,27 @@ def send_device_command(device: str, action: str) -> dict[str, Any]:
     label = device_labels[device]
     device_subject = f"The {label}"
     state_verb = "are" if device == "light" else "is"
-    try:
-        status_request = Request(DEVICE_STATUS_API_URL, method="GET")
-        with urlopen(status_request, timeout=10) as response:
-            status_result = json.loads(response.read())
-    except (HTTPError, TimeoutError, URLError, UnicodeDecodeError, json.JSONDecodeError):
-        status_result = None
+    status_result = None
+    if DEVICE_STATUS_API_URL:
+        try:
+            status_headers = {}
+            if DEVICE_BACKEND_TOKEN:
+                status_headers["Authorization"] = f"Bearer {DEVICE_BACKEND_TOKEN}"
+            status_request = Request(
+                DEVICE_STATUS_API_URL,
+                headers=status_headers,
+                method="GET",
+            )
+            with urlopen(status_request, timeout=10) as response:
+                status_result = json.loads(response.read())
+        except (
+            HTTPError,
+            TimeoutError,
+            URLError,
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+        ):
+            status_result = None
 
     reported_state = None
     if isinstance(status_result, dict) and status_result.get("success") is True:

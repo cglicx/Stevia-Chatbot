@@ -10,6 +10,26 @@ class FastApiDeviceCommandTests(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
 
+    def test_health_check_is_available_without_api_authentication(self):
+        response = self.client.get("/healthz")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+
+    def test_api_requires_configured_bearer_token(self):
+        with patch("fastapi_app.CHATBOT_API_KEY", "a" * 32):
+            unauthorized = self.client.post(
+                "/api/chat",
+                json={"message": "How do I water Stevia?"},
+            )
+            authorized = self.client.post(
+                "/api/chat",
+                headers={"Authorization": f"Bearer {'a' * 32}"},
+                json={"message": "How do I water Stevia?"},
+            )
+
+        self.assertEqual(unauthorized.status_code, 401)
+        self.assertEqual(authorized.status_code, 200)
+
     def test_device_request_returns_mobile_confirmation_options(self):
         response = self.client.post(
             "/api/chat",
@@ -206,6 +226,15 @@ class FastApiDeviceCommandTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         send_command.assert_not_called()
+
+    def test_device_command_reports_missing_backend_configuration(self):
+        with patch("stevia_bot.device_control.DEVICE_CONTROL_API_URL", None):
+            response = self.client.post(
+                "/api/device-command",
+                json={"device": "fan", "action": "ON", "confirmed": True},
+            )
+
+        self.assertEqual(response.status_code, 503)
 
 
 if __name__ == "__main__":
