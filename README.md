@@ -63,7 +63,7 @@ Browser clients can omit the bearer key when their request is same-origin or com
 
 ## Vercel API deployment
 
-The root `pyproject.toml` points Vercel at `fastapi_app:app`, avoiding the separate Flask entrypoint in `app.py`. Deploy this repository as a Vercel project; the Python runtime installs the lean runtime packages from `requirements.txt`. The included joblib intent classifier is used in production. Install `requirements-training.txt` locally only when running classifier training or the optional Transformers fallback.
+The root `pyproject.toml` points Vercel at `fastapi_app:app`, avoiding the separate Flask entrypoint in `app.py`, and lists the Python runtime dependencies Vercel installs. Keep Vercel's Install Command at its default so it can optimize the function bundle. The included joblib intent classifier is used in production. Install `requirements-training.txt` locally only when running classifier training or the optional Transformers fallback.
 
 In the Vercel project settings, add these environment variables for Production (and Preview if needed):
 

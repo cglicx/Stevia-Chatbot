@@ -1,2 +1,16 @@
+[project]
+name = "stevia-chatbot-api"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "openpyxl>=3.1.5",
+    "openai>=1.40.0",
+    "pandas>=2.2.0",
+    "numpy>=2.0.0",
+    "scikit-learn>=1.5,<2",
+    "joblib>=1.4,<2",
+]
+
 [tool.vercel]
 entrypoint = "fastapi_app:app"
