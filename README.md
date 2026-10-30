@@ -41,15 +41,15 @@ python train_intent_classifier.py --data intent_training_data.csv --output-dir m
 
 Training uses a grouped, stratified 70/15/15 train/validation/test split to reduce split leakage. The multilingual character and word n-gram vocabularies are learned from the training set only, after common Tagalog/Taglish terms are normalized. Minibatch SGD uses validation-loss early stopping and saves the best checkpoint; the validation set is then used for confidence calibration and for choosing when a confident model prediction should override keyword routing. The model, vocabularies, configuration, split indices, per-intent classification report, routing metrics, and English/Tagalog/Taglish smoke-test results—including device-control scores—are saved alongside the evaluation report. The recommended batch size is 16, maximum epoch count is 50, learning rate is 0.05, regularization alpha is 1e-5, and patience is 7; these CPU-friendly settings avoid downloading a large pretrained model. Do not treat metrics on synthetic training phrases as production accuracy: evaluate on independently collected, consented user utterances and multi-turn conversations before deployment.
 
-## FastAPI mobile API
+## FastAPI mobile API and Render deployment
 
-The FastAPI API can run alongside the Flask web interface. Install the requirements, then start it with:
+The mobile API is a separate service from the Flask browser interface. Run it locally with:
 
 ```powershell
 py -m uvicorn fastapi_app:app --host 0.0.0.0 --port 8000
 ```
 
-If PowerShell still reports that `uvicorn` is not recognized, use the Python launcher explicitly (`py -m uvicorn ...`) or activate the project virtual environment before running the command.
+The `render.yaml` Blueprint deploys the FastAPI service using `requirements-render.txt`, binds to Render's `$PORT`, and uses `/healthz` for health checks. In Render, the Blueprint generates a `CHATBOT_API_KEY` and sets `ENVIRONMENT=production`. Send the key with every API request as `Authorization: Bearer <CHATBOT_API_KEY>`; never commit it. Production startup fails if the key is missing or shorter than 32 characters. The health endpoint is public; `/api/*` routes require the key. A shared key packaged in a public mobile app can be extracted, so this is a basic access gate, not per-user authentication. For a public consumer release, integrate user authentication and verify user tokens on the API.
 
 Send a JSON `POST` to `http://<server-address>:8000/api/chat` with `message` and optional `history`. The PHP backend supplies current sensor context from `capstone_db.sensor_readings`; direct FastAPI requests fetch the same context from PHP when it is omitted. Configure `CAPSTONE_BACKEND_API_BASE_URL` to the backend entry point, including its trailing `url=` query parameter, when the backend is not at the default address. For a phone on the same Wi-Fi, use the computer's LAN IP address and allow port `8000` through its firewall. For an Android emulator, the host computer is usually available at `10.0.2.2`. Do not use `localhost` from a physical phone. Deploy behind HTTPS and add authentication before exposing the API publicly.
 
@@ -99,7 +99,7 @@ The browser also sends the last few turns as `history`, allowing short follow-up
 }
 ```
 
-For mobile clients, a device confirmation can also include the `device_command` object returned by the initial `/api/chat` response. Send that object as `pending_device_command` with the user's reply so confirmation works even if the app does not resend conversation history:
+For mobile clients, a device confirmation response includes button choices in `confirmation.options`, `quick_replies`, and `buttons`, plus the canonical device command as `device_command` (also `deviceCommand`). The mobile UI must render those button choices. Send the command object as `pending_device_command` or `pendingDeviceCommand` with the user's reply so confirmation works even if the app does not resend conversation history:
 
 ```json
 {

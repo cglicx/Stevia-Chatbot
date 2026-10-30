@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: stevia-chatbot-api
+    runtime: python
+    buildCommand: pip install -r requirements-render.txt
+    startCommand: uvicorn fastapi_app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: CHATBOT_API_KEY
+        generateValue: true

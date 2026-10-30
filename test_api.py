@@ -324,6 +324,29 @@ class ChatApiTests(unittest.TestCase):
         )
         send_command.assert_called_once_with("pump", "ON")
 
+    def test_chat_yes_accepts_camel_case_pending_context(self):
+        with patch(
+            "app.send_device_command",
+            return_value={
+                "success": True,
+                "device": "fan",
+                "action": "ON",
+                "reported_state": "ON",
+                "message": "The fan is ON according to the latest device report.",
+            },
+        ) as send_command:
+            response = self.client.post(
+                "/api/chat",
+                json={
+                    "message": "Yes!",
+                    "pendingDeviceCommand": {"device": "fan", "action": "ON"},
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["intent"], "device_control")
+        send_command.assert_called_once_with("fan", "ON")
+
     def test_invalid_device_command_is_rejected(self):
         response = self.client.post(
             "/api/device-command",

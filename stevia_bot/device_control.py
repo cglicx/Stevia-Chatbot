@@ -28,10 +28,13 @@ def send_device_command(device: str, action: str) -> dict[str, Any]:
         raise DeviceControlError("Action must be ON or OFF.", 400)
 
     body = json.dumps({"device": device, "action": action}).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if DEVICE_BACKEND_TOKEN:
+        headers["Authorization"] = f"Bearer {DEVICE_BACKEND_TOKEN}"
     request = Request(
         DEVICE_CONTROL_API_URL,
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     try:
@@ -62,12 +65,27 @@ def send_device_command(device: str, action: str) -> dict[str, Any]:
     label = device_labels[device]
     device_subject = f"The {label}"
     state_verb = "are" if device == "light" else "is"
-    try:
-        status_request = Request(DEVICE_STATUS_API_URL, method="GET")
-        with urlopen(status_request, timeout=10) as response:
-            status_result = json.loads(response.read())
-    except (HTTPError, TimeoutError, URLError, UnicodeDecodeError, json.JSONDecodeError):
-        status_result = None
+    status_result = None
+    if DEVICE_STATUS_API_URL:
+        try:
+            status_headers = {}
+            if DEVICE_BACKEND_TOKEN:
+                status_headers["Authorization"] = f"Bearer {DEVICE_BACKEND_TOKEN}"
+            status_request = Request(
+                DEVICE_STATUS_API_URL,
+                headers=status_headers,
+                method="GET",
+            )
+            with urlopen(status_request, timeout=10) as response:
+                status_result = json.loads(response.read())
+        except (
+            HTTPError,
+            TimeoutError,
+            URLError,
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+        ):
+            status_result = None
 
     reported_state = None
     if isinstance(status_result, dict) and status_result.get("success") is True:

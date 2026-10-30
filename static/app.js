@@ -94,16 +94,18 @@ function addSensorRecordsTable(container, records) {
 }
 
 function addDeviceConfirmation(container, data) {
-  if (!data.confirmation?.required || !data.device_command) return;
+  const command = data.device_command || data.deviceCommand;
+  const options = data.confirmation?.options || data.quick_replies || data.buttons;
+  if (!data.confirmation?.required || !command || !Array.isArray(options)) return;
 
   const controls = document.createElement('div');
   controls.className = 'device-confirmation';
-  data.confirmation.options.forEach((option) => {
+  options.forEach((option) => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = option.label;
+    button.textContent = option.label || option.text;
     button.addEventListener('click', () => {
-      handleDeviceConfirmation(controls, data.device_command, option.value);
+      handleDeviceConfirmation(controls, command, option.value);
     });
     controls.appendChild(button);
   });
