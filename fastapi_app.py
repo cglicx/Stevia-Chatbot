@@ -3,6 +3,7 @@ from typing import Any, Literal
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from stevia_bot.backend_sensor_data import SensorBackendError, fetch_live_sensor_context
 from stevia_bot.chatbot import SteviaChatbot
 from stevia_bot.device_control import DeviceControlError, send_device_command
 
@@ -16,13 +17,15 @@ class ChatTurn(BaseModel):
 
 
 class PendingDeviceCommand(BaseModel):
-    device: Literal["light", "fan", "pump"]
+    device: Literal["light", "pump"]
     action: Literal["ON", "OFF"]
 
 
 class ChatRequest(BaseModel):
     message: str
     sensor_data: dict[str, Any] | None = None
+    sensor_records: list[dict[str, Any]] | None = None
+    sensor_records_total: int | None = None
     history: list[ChatTurn] | None = None
     pending_device_command: PendingDeviceCommand | None = None
 
@@ -37,6 +40,21 @@ def chat(payload: ChatRequest) -> dict[str, Any]:
     if not question:
         raise HTTPException(status_code=400, detail="Please enter a question.")
 
+    sensor_data = payload.sensor_data
+    sensor_records = payload.sensor_records
+    sensor_records_total = payload.sensor_records_total
+    if sensor_data is None or sensor_records is None:
+        try:
+            live_data, live_records, live_total = fetch_live_sensor_context()
+        except SensorBackendError as error:
+            raise HTTPException(status_code=502, detail=str(error)) from error
+        if sensor_data is None:
+            sensor_data = live_data
+        if sensor_records is None:
+            sensor_records = live_records
+        if sensor_records_total is None:
+            sensor_records_total = live_total
+
     history = (
         [{"role": turn.role, "content": turn.content} for turn in payload.history]
         if payload.history is not None
@@ -44,7 +62,9 @@ def chat(payload: ChatRequest) -> dict[str, Any]:
     )
     result = chatbot.answer(
         question,
-        sensor_data=payload.sensor_data,
+        sensor_data=sensor_data,
+        sensor_records=sensor_records,
+        sensor_records_total=sensor_records_total,
         history=history,
         pending_device_context=(
             payload.pending_device_command.model_dump()

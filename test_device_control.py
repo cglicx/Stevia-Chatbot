@@ -27,26 +27,25 @@ class DeviceControlTests(unittest.TestCase):
         status_response = self.backend_response({
             "success": True,
             "devices": [
-                {"device_name": "fan", "desired_state": "ON", "actual_state": "ON"},
-                {"device_name": "light", "desired_state": "OFF", "actual_state": "OFF"},
+                {"device_name": "pump", "desired_state": "ON", "actual_state": "ON"},
             ],
         })
         with patch(
             "stevia_bot.device_control.urlopen",
             side_effect=[command_response, status_response],
         ) as urlopen:
-            result = send_device_command("fan", "ON")
+            result = send_device_command("pump", "ON")
 
         request = urlopen.call_args_list[0].args[0]
         self.assertEqual(request.full_url, DEVICE_CONTROL_API_URL)
         self.assertEqual(
             request.full_url,
-            "http://192.168.1.20/Capstone/Backend/?url=device-control",
+            "http://192.168.1.20/Capstone/Backend/index.php?url=device-control",
         )
         self.assertEqual(request.method, "POST")
         self.assertEqual(
             json.loads(request.data),
-            {"device": "fan", "action": "ON"},
+            {"device": "pump", "action": "ON"},
         )
         status_request = urlopen.call_args_list[1].args[0]
         self.assertEqual(status_request.full_url, DEVICE_STATUS_API_URL)
@@ -54,7 +53,7 @@ class DeviceControlTests(unittest.TestCase):
         self.assertEqual(result["reported_state"], "ON")
         self.assertEqual(
             result["message"],
-            "The fan is ON according to the latest device report.",
+            "The pump is ON according to the latest device report.",
         )
 
     def test_command_reports_when_device_has_not_reached_requested_state(self):
@@ -62,14 +61,14 @@ class DeviceControlTests(unittest.TestCase):
         status_response = self.backend_response({
             "success": True,
             "devices": [
-                {"device_name": "fan", "desired_state": "ON", "actual_state": "OFF"},
+                {"device_name": "pump", "desired_state": "ON", "actual_state": "OFF"},
             ],
         })
         with patch(
             "stevia_bot.device_control.urlopen",
             side_effect=[command_response, status_response],
         ):
-            result = send_device_command("fan", "ON")
+            result = send_device_command("pump", "ON")
 
         self.assertEqual(result["reported_state"], "OFF")
         self.assertIn("latest reported state is OFF", result["message"])
@@ -93,6 +92,12 @@ class DeviceControlTests(unittest.TestCase):
             "The lights are ON according to the latest device report.",
         )
 
+    def test_unsupported_device_is_rejected_without_a_backend_request(self):
+        with patch("stevia_bot.device_control.urlopen") as urlopen:
+            with self.assertRaisesRegex(DeviceControlError, "Unsupported device"):
+                send_device_command("fan", "ON")
+        urlopen.assert_not_called()
+
     def test_backend_failure_is_not_reported_as_success(self):
         response = MagicMock()
         response.__enter__.return_value.read.return_value = (
@@ -100,7 +105,7 @@ class DeviceControlTests(unittest.TestCase):
         )
         with patch("stevia_bot.device_control.urlopen", return_value=response):
             with self.assertRaisesRegex(DeviceControlError, "Device not found"):
-                send_device_command("fan", "ON")
+                send_device_command("pump", "ON")
 
 
 if __name__ == "__main__":

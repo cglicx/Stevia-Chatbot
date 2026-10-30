@@ -22,10 +22,8 @@ class ChatbotIntentTests(unittest.TestCase):
         chatbot = SteviaChatbot()
 
         for request, device in (
-            ("open fan", "fan"),
             ("open lights", "light"),
             ("open sprinkler", "pump"),
-            ("turn on the fan", "fan"),
         ):
             with self.subTest(request=request):
                 result = chatbot.answer(request)
@@ -41,6 +39,13 @@ class ChatbotIntentTests(unittest.TestCase):
                     ["Yes", "No"],
                 )
 
+    def test_fan_command_is_reported_as_unsupported(self):
+        result = SteviaChatbot().answer("Turn on the fan.")
+
+        self.assertEqual(result["intent"], "device_control")
+        self.assertIn("only supports the light and pump relays", result["answer"])
+        self.assertNotIn("device_command", result)
+
     def test_device_question_does_not_send_a_command_prompt(self):
         result = SteviaChatbot().answer("Should I open the fan?")
 
@@ -50,14 +55,10 @@ class ChatbotIntentTests(unittest.TestCase):
         chatbot = SteviaChatbot()
 
         for request, device, action in (
-            ("Buksan ang bentilador", "fan", "ON"),
-            ("Patayin ang bentilador", "fan", "OFF"),
             ("Buksan ang mga ilaw", "light", "ON"),
             ("Patayin ang ilaw", "light", "OFF"),
             ("Paandarin ang bomba", "pump", "ON"),
             ("Patayin ang pandilig", "pump", "OFF"),
-            ("Paki-open yung fan", "fan", "ON"),
-            ("I-off mo yung fan", "fan", "OFF"),
             ("Paandarin yung lights", "light", "ON"),
             ("Patayin yung sprinkler", "pump", "OFF"),
         ):
@@ -88,10 +89,10 @@ class ChatbotIntentTests(unittest.TestCase):
     def test_yes_confirms_device_command_and_no_cancels_it(self):
         chatbot = SteviaChatbot()
         pending = [
-            {"role": "user", "content": "open fan"},
+            {"role": "user", "content": "open pump"},
             {
                 "role": "assistant",
-                "content": "Would you like me to turn on the fan?",
+                "content": "Would you like me to turn on the pump?",
             },
         ]
 
@@ -102,7 +103,7 @@ class ChatbotIntentTests(unittest.TestCase):
         self.assertTrue(confirmed["execute_device_command"])
         self.assertEqual(
             confirmed["device_command"],
-            {"device": "fan", "action": "ON"},
+            {"device": "pump", "action": "ON"},
         )
         self.assertIn("Cancelled", cancelled["answer"])
         self.assertNotIn("execute_device_command", cancelled)
@@ -121,11 +122,11 @@ class ChatbotIntentTests(unittest.TestCase):
 
     def test_tagalog_device_confirmation_is_recognized(self):
         chatbot = SteviaChatbot()
-        prompt = chatbot.answer("Buksan ang bentilador.")
+        prompt = chatbot.answer("Paandarin ang bomba.")
         confirmed = chatbot.answer(
             "Oo",
             history=[
-                {"role": "user", "content": "Buksan ang bentilador."},
+                {"role": "user", "content": "Paandarin ang bomba."},
                 {"role": "assistant", "content": prompt["answer"]},
             ],
         )
@@ -133,7 +134,7 @@ class ChatbotIntentTests(unittest.TestCase):
         self.assertTrue(confirmed["execute_device_command"])
         self.assertEqual(
             confirmed["device_command"],
-            {"device": "fan", "action": "ON"},
+            {"device": "pump", "action": "ON"},
         )
 
     def test_device_control_training_phrases_match_command_intent(self):

@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, render_template, request
 
+from stevia_bot.backend_sensor_data import SensorBackendError, fetch_live_sensor_context
 from stevia_bot.chatbot import SteviaChatbot
 from stevia_bot.device_control import DeviceControlError, send_device_command
 from stevia_bot.knowledge_base import SUGGESTED_QUESTIONS, WELCOME_MESSAGE
@@ -23,7 +24,6 @@ def chat():
     if not isinstance(payload, dict):
         payload = {}
     question = str(payload.get("message", "")).strip()
-    sensor_data = payload.get("sensor_data")
     history = payload.get("history")
     pending_device_command = payload.get("pending_device_command")
 
@@ -32,15 +32,22 @@ def chat():
     if pending_device_command is not None and (
         not isinstance(pending_device_command, dict)
         or not isinstance(pending_device_command.get("device"), str)
-        or pending_device_command.get("device") not in {"light", "fan", "pump"}
+        or pending_device_command.get("device") not in {"light", "pump"}
         or not isinstance(pending_device_command.get("action"), str)
         or pending_device_command.get("action") not in {"ON", "OFF"}
     ):
         return jsonify({"error": "Invalid pending device command."}), 400
 
+    try:
+        sensor_data, sensor_records, total_records = fetch_live_sensor_context()
+    except SensorBackendError as error:
+        return jsonify({"error": str(error)}), 502
+
     result = chatbot.answer(
         question,
         sensor_data=sensor_data,
+        sensor_records=sensor_records,
+        sensor_records_total=total_records,
         history=history,
         pending_device_context=pending_device_command,
     )
@@ -69,7 +76,7 @@ def device_command():
     action = payload.get("action")
     if (
         not isinstance(device, str)
-        or device not in {"light", "fan", "pump"}
+        or device not in {"light", "pump"}
         or not isinstance(action, str)
         or action not in {"ON", "OFF"}
     ):
