@@ -33,6 +33,12 @@ Device requests in English, Tagalog, and Taglish (for example, "open fan," "buks
 
 ## Retraining and evaluation
 
+Install the optional training dependencies before retraining:
+
+```powershell
+python -m pip install -r requirements-training.txt
+```
+
 Retrain the intent model with a grouped, stratified 70/15/15 train/validation/test split. Device-control phrases are represented in Tagalog and Taglish alongside the care intents. Batch size 16 provides frequent updates for the smaller intent classes, with a 50-epoch maximum and validation-loss early stopping:
 
 ```powershell
@@ -54,6 +60,22 @@ The `render.yaml` Blueprint deploys the FastAPI service using `requirements-rend
 For local development, API authentication is optional unless `CHATBOT_API_KEY` is set. To configure browser-based clients, set `CORS_ORIGINS` to a comma-separated list of exact origins; native mobile apps do not normally need CORS.
 
 Send a JSON `POST` to `https://<your-render-service>.onrender.com/api/chat` with the same `message`, optional `sensor_data`, and optional `history` fields described below. Include the bearer token header on `/api/chat` and `/api/device-command`. A device-control request is forwarded only after confirmation, but its backend must be hosted somewhere Render can reach; a `192.168.x.x` address on your local network will not work. Set `DEVICE_CONTROL_API_URL` and `DEVICE_STATUS_API_URL` in the Render dashboard, and optionally `DEVICE_BACKEND_TOKEN`. If these URLs are not configured, device-control requests return HTTP 503 rather than silently pretending to work. Set `OPENAI_API_KEY` in Render only if you want to enable OpenAI-backed responses; the local classifier and deterministic fallback work without it.
+
+Browser clients can omit the bearer key when their request is same-origin or comes from an exact origin listed in `CORS_ORIGINS`; configure the frontend's origin there. This is only a browser integration convenience: an origin header is not authentication and can be forged by non-browser clients. Never put the shared key in public frontend code. Add user authentication and rate limiting before exposing the API as a public consumer service.
+
+## Vercel API deployment
+
+The root `pyproject.toml` points Vercel at `fastapi_app:app`, avoiding the separate Flask entrypoint in `app.py`. Deploy this repository as a Vercel project; the Python runtime installs the lean runtime packages from `requirements.txt`. The included joblib intent classifier is used in production. Install `requirements-training.txt` locally only when running classifier training or the optional Transformers fallback.
+
+In the Vercel project settings, add these environment variables for Production (and Preview if needed):
+
+- `ENVIRONMENT` = `production`
+- `CHATBOT_API_KEY` = a randomly generated secret with at least 32 characters
+- `CORS_ORIGINS` = comma-separated exact origins of browser frontends that call this API, such as `https://your-app.example`
+
+The API is available at `https://<your-vercel-domain>/api/chat`; `/healthz` is public. Browser requests from an origin in `CORS_ORIGINS` (or from the API's own origin) can call it without exposing `CHATBOT_API_KEY` in frontend code. Keep the key for server-to-server callers. This origin check is not an access-control boundary; add authenticated user tokens and rate limits for a public application.
+
+If you use the included Flask browser frontend on a separate deployment, set `CHAT_API_BASE_URL` on that frontend's server to the Vercel API origin (without a trailing slash). Add the frontend's exact origin to `CORS_ORIGINS` on Vercel. When the frontend and API are on the same origin, leave `CHAT_API_BASE_URL` unset. Set `DEVICE_CONTROL_API_URL` (and optionally `DEVICE_STATUS_API_URL` and `DEVICE_BACKEND_TOKEN`) in Vercel only when the device backend is reachable from Vercel; local-network device URLs will not work.
 
 ## Uploaded knowledge
 

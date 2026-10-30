@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, jsonify, render_template, request
 
 from stevia_bot.chatbot import SteviaChatbot
@@ -14,6 +16,7 @@ def index():
         "index.html",
         welcome_message=WELCOME_MESSAGE,
         suggested_questions=SUGGESTED_QUESTIONS,
+        api_base_url=os.getenv("CHAT_API_BASE_URL", "").strip().rstrip("/"),
     )
 
 

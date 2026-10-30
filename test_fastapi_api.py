@@ -30,6 +30,19 @@ class FastApiDeviceCommandTests(unittest.TestCase):
         self.assertEqual(unauthorized.status_code, 401)
         self.assertEqual(authorized.status_code, 200)
 
+    def test_allowed_browser_origin_can_call_api_without_bearer_token(self):
+        with (
+            patch("fastapi_app.CHATBOT_API_KEY", "a" * 32),
+            patch("fastapi_app.cors_origins", ["https://chat.example.com"]),
+        ):
+            response = self.client.post(
+                "/api/chat",
+                headers={"Origin": "https://chat.example.com"},
+                json={"message": "How do I water Stevia?"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+
     def test_device_request_returns_mobile_confirmation_options(self):
         response = self.client.post(
             "/api/chat",

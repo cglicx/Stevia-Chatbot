@@ -50,6 +50,13 @@ async def require_api_key(request: Request, call_next):
                 )
         else:
             authorization = request.headers.get("Authorization", "")
+            origin = request.headers.get("Origin")
+            same_origin = origin == f"{request.url.scheme}://{request.url.netloc}"
+            if not authorization and (
+                same_origin or origin in cors_origins
+            ):
+                return await call_next(request)
+
             scheme, _, supplied_key = authorization.partition(" ")
             if (
                 scheme.casefold() != "bearer"

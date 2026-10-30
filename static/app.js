@@ -2,6 +2,7 @@ const form = document.querySelector('#chat-form');
 const input = document.querySelector('#message');
 const messages = document.querySelector('#messages');
 const suggestions = document.querySelectorAll('.suggestion');
+const apiBaseUrl = (window.STEVIA_API_BASE_URL || '').replace(/\/+$/, '');
 const conversation = [];
 
 const sensorRecordColumns = [
@@ -126,7 +127,7 @@ async function ask(question, pendingDeviceCommand = null) {
   input.value = '';
   input.disabled = true;
   try {
-    const response = await fetch('/api/chat', {
+    const response = await fetch(`${apiBaseUrl}/api/chat`, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         message: question,
