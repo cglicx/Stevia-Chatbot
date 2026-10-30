@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .iot_data import LATEST_READING, load_sensor_records
+from .iot_data import LATEST_READING, _trend_direction, load_sensor_records
 from .knowledge_base import KNOWLEDGE_BASE, KNOWLEDGE_SOURCE, SPROUT_KNOWLEDGE
 
 _LOGGER = logging.getLogger(__name__)
@@ -806,9 +806,40 @@ class SteviaChatbot:
         sensor_data: dict[str, Any] | None = None,
         history: list[dict[str, Any]] | None = None,
         pending_device_context: dict[str, Any] | None = None,
+        sensor_records: list[dict[str, Any]] | None = None,
+        sensor_records_total: int | None = None,
     ) -> dict[str, Any]:
         manual_sensor_data = sensor_data if isinstance(sensor_data, dict) else {}
-        combined_sensor_data = {**LATEST_READING, **manual_sensor_data}
+        combined_sensor_data = (
+            manual_sensor_data if sensor_data is not None else LATEST_READING
+        )
+        available_sensor_records = sensor_records if isinstance(sensor_records, list) else None
+        total_sensor_records = sensor_records_total
+        if available_sensor_records is not None and sensor_data is not None:
+            trend_fields = {
+                "temperature": "temperature",
+                "humidity": "humidity",
+                "water_level": "soil_moisture",
+            }
+            trends = {}
+            for name, field in trend_fields.items():
+                values = [
+                    record.get(field)
+                    for record in reversed(available_sensor_records[:5])
+                    if isinstance(record.get(field), (int, float))
+                ]
+                trends[name] = _trend_direction(values)
+            if any(direction is not None for direction in trends.values()):
+                combined_sensor_data["sensor_trends"] = trends
+
+        def get_sensor_records() -> tuple[list[dict[str, Any]], int]:
+            nonlocal available_sensor_records, total_sensor_records
+            if available_sensor_records is None:
+                available_sensor_records = load_sensor_records()
+            if total_sensor_records is None or total_sensor_records < 0:
+                total_sensor_records = len(available_sensor_records)
+            return available_sensor_records, total_sensor_records
+
         history = self._history_before_current(question, history)
         tagalog_response = self._contains_tagalog(question)
         taglish_response = self._contains_taglish(question)
@@ -868,24 +899,31 @@ class SteviaChatbot:
             context_action = pending_device_context.get("action")
             if (
                 isinstance(context_device, str)
-                and context_device in {"light", "fan", "pump"}
+                and context_device in {"light", "pump"}
                 and isinstance(context_action, str)
                 and context_action in {"ON", "OFF"}
             ):
                 pending_device_command = {
                     "device": context_device,
                     "action": context_action,
-                    "label": {
-                        "light": "lights",
-                        "fan": "fan",
-                        "pump": "pump",
-                    }[context_device],
+                    "label": {"light": "lights", "pump": "pump"}[context_device],
                 }
-        confirmation_reply = re.sub(
-            r"[^a-z]+",
-            " ",
-            question.strip().casefold(),
-        ).strip()
+        confirmation_reply = question.strip().casefold()
+        if (
+            pending_device_command
+            and pending_device_command["device"] == "fan"
+            and confirmation_reply in {
+                "yes", "y", "yeah", "yep", "sure", "go ahead", "confirm",
+                "oo", "opo", "sige", "tama",
+            }
+        ):
+            return respond(
+                "Fan control is unavailable because the connected ESP32 firmware only supports the light and pump relays.",
+                "Device control",
+                "device_control",
+                "unsupported device",
+                combined_sensor_data,
+            )
         if pending_device_command and confirmation_reply in {
             "yes", "y", "yeah", "yep", "yes please", "yeah please", "okay",
             "ok", "sure", "go ahead", "confirm", "oo", "opo", "sige", "tama",
@@ -921,6 +959,14 @@ class SteviaChatbot:
 
         device_command = self._device_command(question)
         if device_command:
+            if device_command["device"] == "fan":
+                return respond(
+                    "Fan control is unavailable because the connected ESP32 firmware only supports the light and pump relays.",
+                    "Device control",
+                    "device_control",
+                    "unsupported device",
+                    combined_sensor_data,
+                )
             device_label = (
                 "lights" if device_command["device"] == "light"
                 else "sprinkler" if "sprinkler" in question.casefold()
@@ -1004,10 +1050,14 @@ class SteviaChatbot:
                 )
 
             if selection is not None:
-                records = load_sensor_records()
+                records, total_records = get_sensor_records()
                 selected_records = records if selection == "all" else records[:selection]
                 return respond(
-                    self._sensor_records_summary(selected_records, selection),
+                    self._sensor_records_summary(
+                        selected_records,
+                        selection,
+                        total_records=total_records,
+                    ),
                     "Historical sensor records",
                     "sensor_records",
                     "sensor-data",
@@ -1017,10 +1067,14 @@ class SteviaChatbot:
 
         if self._asks_for_multiple_latest_readings(question):
             selection = self._sensor_records_selection(question)
-            records = load_sensor_records()
+            records, total_records = get_sensor_records()
             selected_records = records[:selection] if isinstance(selection, int) else records
             return respond(
-                self._sensor_records_summary(selected_records, selection),
+                self._sensor_records_summary(
+                    selected_records,
+                    selection,
+                    total_records=total_records,
+                ),
                 "Historical sensor records",
                 "sensor_records",
                 "sensor-data",
@@ -1031,10 +1085,15 @@ class SteviaChatbot:
         follow_up = self._sensor_records_follow_up(question, history)
         if follow_up is not None:
             limit, offset = follow_up
-            records = load_sensor_records()
+            records, total_records = get_sensor_records()
             selected_records = records[offset:] if limit == "all" else records[offset:offset + limit]
             return respond(
-                self._sensor_records_summary(selected_records, limit, offset),
+                self._sensor_records_summary(
+                    selected_records,
+                    limit,
+                    offset,
+                    total_records=total_records,
+                ),
                 "Historical sensor records",
                 "sensor_records",
                 "sensor-data",
@@ -1688,7 +1747,7 @@ class SteviaChatbot:
         history: list[dict[str, Any]] | None = None,
     ) -> str:
         if not sensor_data:
-            return "No IoTProcessed_Data reading is available yet."
+            return "No live sensor reading is available yet."
         recorded_at = sensor_data.get("recorded_at", "unknown time")
         temperature = sensor_data.get("temperature", "unknown")
         humidity = sensor_data.get("humidity", "unknown")
@@ -1739,6 +1798,7 @@ class SteviaChatbot:
         records: list[dict[str, Any]],
         selection: int | str | None = None,
         offset: int = 0,
+        total_records: int | None = None,
     ) -> str:
         if not records:
             return "No historical Stevia sensor records are available."
@@ -1746,6 +1806,11 @@ class SteviaChatbot:
         reading_label = "reading" if len(records) == 1 else "readings"
         record_range = f"(records {offset + 1}-{offset + len(records)})"
         if selection == "all":
+            if total_records is not None and total_records > len(records):
+                return (
+                    f"Showing the latest {len(records)} of {total_records} sensor readings "
+                    f"{record_range}, newest first."
+                )
             return f"Showing all {len(records)} sensor {reading_label} {record_range}, newest first."
         if isinstance(selection, int) and len(records) < selection:
             requested_label = "reading" if selection == 1 else "readings"

@@ -4,9 +4,12 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from typing import Any
 
-DEVICE_CONTROL_API_URL = os.getenv("DEVICE_CONTROL_API_URL", "").strip() or None
-DEVICE_STATUS_API_URL = os.getenv("DEVICE_STATUS_API_URL", "").strip() or None
-DEVICE_BACKEND_TOKEN = os.getenv("DEVICE_BACKEND_TOKEN", "").strip()
+BACKEND_API_BASE_URL = os.getenv(
+    "CAPSTONE_BACKEND_API_BASE_URL",
+    "http://192.168.1.20/Capstone/Backend/index.php?url=",
+)
+DEVICE_CONTROL_API_URL = f"{BACKEND_API_BASE_URL}device-control"
+DEVICE_STATUS_API_URL = f"{BACKEND_API_BASE_URL}device-status"
 
 
 class DeviceControlError(Exception):
@@ -16,10 +19,13 @@ class DeviceControlError(Exception):
 
 
 def send_device_command(device: str, action: str) -> dict[str, Any]:
-    if not DEVICE_CONTROL_API_URL:
+    if device not in {"light", "pump"}:
         raise DeviceControlError(
-            "Device control is not configured on this server.", status_code=503
+            "Unsupported device; the connected ESP32 supports only light and pump.",
+            400,
         )
+    if action not in {"ON", "OFF"}:
+        raise DeviceControlError("Action must be ON or OFF.", 400)
 
     body = json.dumps({"device": device, "action": action}).encode("utf-8")
     headers = {"Content-Type": "application/json"}
@@ -55,7 +61,7 @@ def send_device_command(device: str, action: str) -> dict[str, Any]:
             message = "Device backend could not execute the command."
         raise DeviceControlError(message)
 
-    device_labels = {"light": "lights", "fan": "fan", "pump": "pump"}
+    device_labels = {"light": "lights", "pump": "pump"}
     label = device_labels[device]
     device_subject = f"The {label}"
     state_verb = "are" if device == "light" else "is"

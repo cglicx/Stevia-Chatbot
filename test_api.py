@@ -2,12 +2,19 @@ import unittest
 from unittest.mock import patch
 
 from app import app
+from stevia_bot.backend_sensor_data import SensorBackendError
 from stevia_bot.chatbot import SteviaChatbot
 
 
 class ChatApiTests(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
+        self.live_sensor_context = patch(
+            "app.fetch_live_sensor_context",
+            return_value=({}, [], 0),
+        )
+        self.live_sensor_context.start()
+        self.addCleanup(self.live_sensor_context.stop)
 
     def test_unqualified_latest_readings_asks_how_many(self):
         response = self.client.post(
@@ -30,10 +37,11 @@ class ChatApiTests(unittest.TestCase):
         )
         prompt = prompt_response.get_json()
 
-        with patch("stevia_bot.chatbot.load_sensor_records", return_value=[
+        records = [
             {"recorded_at": "2024-09-27 13:28:26", "temperature": 26.7},
             {"recorded_at": "2024-09-27 13:28:13", "temperature": 26.6},
-        ]):
+        ]
+        with patch("app.fetch_live_sensor_context", return_value=({}, records, 2)):
             response = self.client.post(
                 "/api/chat",
                 json={
@@ -55,6 +63,79 @@ class ChatApiTests(unittest.TestCase):
             {"recorded_at": "2024-09-27 13:28:26", "temperature": 26.7},
         ])
 
+    def test_database_sensor_context_and_history_override_local_files(self):
+        records = [
+            {
+                "recorded_at": "2026-10-30 10:00:00",
+                "temperature": 27.1,
+                "humidity": 70.0,
+                "soil_moisture": 48.0,
+                "water_level": 48.0,
+                "soil_ph": 6.8,
+                "light_intensity": 9200.0,
+            },
+            {
+                "recorded_at": "2026-10-30 09:59:30",
+                "temperature": 26.9,
+                "humidity": 71.0,
+                "soil_moisture": 49.0,
+                "water_level": 49.0,
+                "soil_ph": 6.8,
+                "light_intensity": 9100.0,
+            },
+        ]
+
+        with patch("stevia_bot.chatbot.LATEST_READING", {"temperature": 12}), \
+             patch(
+                 "app.fetch_live_sensor_context",
+                 return_value=(
+                     {
+                         "recorded_at": records[0]["recorded_at"],
+                         "temperature": 27.1,
+                         "humidity": 70.0,
+                         "soil_moisture": 48.0,
+                         "water_level": 48.0,
+                         "soil_ph": 6.8,
+                         "light_intensity": 9200.0,
+                     },
+                     records,
+                     2,
+                 ),
+             ), \
+             patch("stevia_bot.chatbot.load_sensor_records", side_effect=AssertionError):
+            response = self.client.post(
+                "/api/chat",
+                json={
+                    "message": "Can you send me the 2 latest sensor readings?",
+                    "sensor_data": {
+                        "recorded_at": records[0]["recorded_at"],
+                        "temperature": 27.1,
+                        "humidity": 70.0,
+                        "soil_moisture": 48.0,
+                        "water_level": 48.0,
+                        "soil_ph": 6.8,
+                        "light_intensity": 9200.0,
+                    },
+                    "sensor_records": records,
+                    "sensor_records_total": 2,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["sensor_data"]["temperature"], 27.1)
+        self.assertEqual(payload["sensor_records"], records)
+        self.assertIn("Showing 2 sensor readings", payload["answer"])
+
+    def test_sensor_history_response_discloses_truncated_database_history(self):
+        answer = SteviaChatbot._sensor_records_summary(
+            [{"recorded_at": "2026-10-30 10:00:00"}],
+            selection="all",
+            total_records=1200,
+        )
+
+        self.assertIn("latest 1 of 1200 sensor readings", answer)
+
     def test_counted_sensor_request_and_follow_ups_preserve_context(self):
         records = [
             {"recorded_at": f"2024-09-27 13:{minute}:26", "temperature": value}
@@ -74,7 +155,10 @@ class ChatApiTests(unittest.TestCase):
             {"role": "user", "content": first_question},
         ]
 
-        with patch("stevia_bot.chatbot.load_sensor_records", return_value=records):
+        with patch(
+            "app.fetch_live_sensor_context",
+            return_value=({}, records, len(records)),
+        ):
             first_response = self.client.post(
                 "/api/chat",
                 json={"message": first_question, "history": conversation},
@@ -125,7 +209,10 @@ class ChatApiTests(unittest.TestCase):
             {"role": "user", "content": "atleast 3"},
         ]
 
-        with patch("stevia_bot.chatbot.load_sensor_records", return_value=records):
+        with patch(
+            "app.fetch_live_sensor_context",
+            return_value=({}, records, len(records)),
+        ):
             response = self.client.post(
                 "/api/chat",
                 json={"message": "atleast 3", "history": conversation},
@@ -157,6 +244,22 @@ class ChatApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json(), {"error": "Please enter a question."})
 
+    def test_sensor_backend_failure_is_returned_instead_of_using_local_files(self):
+        with patch(
+            "app.fetch_live_sensor_context",
+            side_effect=SensorBackendError("The sensor backend is unavailable."),
+        ):
+            response = self.client.post(
+                "/api/chat",
+                json={"message": "What is my latest temperature?"},
+            )
+
+        self.assertEqual(response.status_code, 502)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "The sensor backend is unavailable."},
+        )
+
     def test_non_object_json_returns_bad_request(self):
         response = self.client.post("/api/chat", json=["not", "an", "object"])
 
@@ -166,7 +269,7 @@ class ChatApiTests(unittest.TestCase):
     def test_device_command_requires_explicit_confirmation(self):
         response = self.client.post(
             "/api/device-command",
-            json={"device": "fan", "action": "ON", "confirmed": False},
+            json={"device": "pump", "action": "ON", "confirmed": False},
         )
 
         self.assertEqual(response.status_code, 400)
@@ -180,36 +283,36 @@ class ChatApiTests(unittest.TestCase):
             "app.send_device_command",
             return_value={
                 "success": True,
-                "device": "fan",
+                "device": "pump",
                 "action": "ON",
                 "message": "Device command saved.",
             },
         ) as send_command:
             response = self.client.post(
                 "/api/device-command",
-                json={"device": "fan", "action": "ON", "confirmed": True},
+                json={"device": "pump", "action": "ON", "confirmed": True},
             )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["success"], True)
-        send_command.assert_called_once_with("fan", "ON")
+        send_command.assert_called_once_with("pump", "ON")
 
     def test_chat_yes_reply_executes_explicit_pending_device_context(self):
         with patch(
             "app.send_device_command",
             return_value={
                 "success": True,
-                "device": "fan",
+                "device": "pump",
                 "action": "ON",
                 "reported_state": "ON",
-                "message": "The fan is ON according to the latest device report.",
+                "message": "The pump is ON according to the latest device report.",
             },
         ) as send_command:
             response = self.client.post(
                 "/api/chat",
                 json={
                     "message": "Yes",
-                    "pending_device_command": {"device": "fan", "action": "ON"},
+                    "pending_device_command": {"device": "pump", "action": "ON"},
                 },
             )
 
@@ -217,9 +320,9 @@ class ChatApiTests(unittest.TestCase):
         self.assertEqual(response.get_json()["intent"], "device_control")
         self.assertEqual(
             response.get_json()["answer"],
-            "The fan is ON according to the latest device report.",
+            "The pump is ON according to the latest device report.",
         )
-        send_command.assert_called_once_with("fan", "ON")
+        send_command.assert_called_once_with("pump", "ON")
 
     def test_chat_yes_accepts_camel_case_pending_context(self):
         with patch(

@@ -80,7 +80,7 @@ class ChatTurn(BaseModel):
 
 
 class PendingDeviceCommand(BaseModel):
-    device: Literal["light", "fan", "pump"]
+    device: Literal["light", "pump"]
     action: Literal["ON", "OFF"]
 
 
@@ -89,11 +89,10 @@ class ChatRequest(BaseModel):
 
     message: str = Field(max_length=2000)
     sensor_data: dict[str, Any] | None = None
-    history: list[ChatTurn] | None = Field(default=None, max_length=50)
-    pending_device_command: PendingDeviceCommand | None = Field(
-        default=None,
-        alias="pendingDeviceCommand",
-    )
+    sensor_records: list[dict[str, Any]] | None = None
+    sensor_records_total: int | None = None
+    history: list[ChatTurn] | None = None
+    pending_device_command: PendingDeviceCommand | None = None
 
 
 class DeviceCommandRequest(PendingDeviceCommand):
@@ -129,6 +128,8 @@ def chat(payload: ChatRequest) -> dict[str, Any]:
     result = chatbot.answer(
         question,
         sensor_data=payload.sensor_data,
+        sensor_records=payload.sensor_records,
+        sensor_records_total=payload.sensor_records_total,
         history=history,
         pending_device_context=(
             payload.pending_device_command.model_dump()

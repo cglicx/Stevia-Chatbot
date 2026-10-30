@@ -62,15 +62,24 @@ class FastApiDeviceCommandTests(unittest.TestCase):
         self.assertEqual(payload["buttons"], payload["quick_replies"])
         self.assertEqual(payload["deviceCommand"], payload["device_command"])
 
+    def test_chat_uses_bundled_data_without_requiring_sensor_backend(self):
+        response = self.client.post(
+            "/api/chat",
+            json={"message": "How do I care for Stevia?"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("answer", response.json())
+
     def test_chat_yes_reply_executes_pending_device_command_and_confirms_state(self):
         with patch(
             "fastapi_app.send_device_command",
             return_value={
                 "success": True,
-                "device": "fan",
+                "device": "pump",
                 "action": "ON",
                 "reported_state": "ON",
-                "message": "The fan is ON according to the latest device report.",
+                "message": "The pump is ON according to the latest device report.",
             },
         ) as send_command:
             response = self.client.post(
@@ -78,10 +87,10 @@ class FastApiDeviceCommandTests(unittest.TestCase):
                 json={
                     "message": "Yes",
                     "history": [
-                        {"role": "user", "content": "open fan"},
+                        {"role": "user", "content": "open pump"},
                         {
                             "role": "assistant",
-                            "content": "Would you like me to turn on the fan?",
+                            "content": "Would you like me to turn on the pump?",
                         },
                         {"role": "user", "content": "Yes"},
                     ],
@@ -93,11 +102,11 @@ class FastApiDeviceCommandTests(unittest.TestCase):
         self.assertEqual(payload["intent"], "device_control")
         self.assertEqual(
             payload["answer"],
-            "The fan is ON according to the latest device report.",
+            "The pump is ON according to the latest device report.",
         )
         self.assertEqual(payload["device_result"]["reported_state"], "ON")
         self.assertNotIn("execute_device_command", payload)
-        send_command.assert_called_once_with("fan", "ON")
+        send_command.assert_called_once_with("pump", "ON")
 
     def test_chat_no_reply_cancels_pending_device_command(self):
         with patch("fastapi_app.send_device_command") as send_command:
@@ -106,10 +115,10 @@ class FastApiDeviceCommandTests(unittest.TestCase):
                 json={
                     "message": "No",
                     "history": [
-                        {"role": "user", "content": "open fan"},
+                        {"role": "user", "content": "open pump"},
                         {
                             "role": "assistant",
-                            "content": "Would you like me to turn on the fan?",
+                            "content": "Would you like me to turn on the pump?",
                         },
                         {"role": "user", "content": "No"},
                     ],
@@ -152,7 +161,7 @@ class FastApiDeviceCommandTests(unittest.TestCase):
                 "/api/chat",
                 json={
                     "message": "No",
-                    "pending_device_command": {"device": "fan", "action": "ON"},
+                    "pending_device_command": {"device": "pump", "action": "ON"},
                 },
             )
 
@@ -217,37 +226,38 @@ class FastApiDeviceCommandTests(unittest.TestCase):
             "fastapi_app.send_device_command",
             return_value={
                 "success": True,
-                "device": "fan",
+                "device": "pump",
                 "action": "ON",
                 "message": "Device command saved.",
             },
         ) as send_command:
             response = self.client.post(
                 "/api/device-command",
-                json={"device": "fan", "action": "ON", "confirmed": True},
+                json={"device": "pump", "action": "ON", "confirmed": True},
             )
 
         self.assertEqual(response.status_code, 200)
-        send_command.assert_called_once_with("fan", "ON")
+        send_command.assert_called_once_with("pump", "ON")
 
     def test_unconfirmed_mobile_command_is_not_forwarded(self):
         with patch("fastapi_app.send_device_command") as send_command:
             response = self.client.post(
                 "/api/device-command",
-                json={"device": "fan", "action": "ON", "confirmed": False},
+                json={"device": "pump", "action": "ON", "confirmed": False},
             )
 
         self.assertEqual(response.status_code, 400)
         send_command.assert_not_called()
 
-    def test_device_command_reports_missing_backend_configuration(self):
-        with patch("stevia_bot.device_control.DEVICE_CONTROL_API_URL", None):
+    def test_fan_device_command_is_rejected_as_unsupported(self):
+        with patch("fastapi_app.send_device_command") as send_command:
             response = self.client.post(
                 "/api/device-command",
                 json={"device": "fan", "action": "ON", "confirmed": True},
             )
 
-        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.status_code, 422)
+        send_command.assert_not_called()
 
 
 if __name__ == "__main__":
