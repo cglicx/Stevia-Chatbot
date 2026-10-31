@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from stevia_bot.backend_sensor_data import SensorBackendError, fetch_live_sensor_context
 from stevia_bot.chatbot import SteviaChatbot
 from stevia_bot.device_control import DeviceControlError, send_device_command
 
@@ -50,13 +51,6 @@ async def require_api_key(request: Request, call_next):
                 )
         else:
             authorization = request.headers.get("Authorization", "")
-            origin = request.headers.get("Origin")
-            same_origin = origin == f"{request.url.scheme}://{request.url.netloc}"
-            if not authorization and (
-                same_origin or origin in cors_origins
-            ):
-                return await call_next(request)
-
             scheme, _, supplied_key = authorization.partition(" ")
             if (
                 scheme.casefold() != "bearer"
@@ -93,6 +87,7 @@ class ChatRequest(BaseModel):
     sensor_records_total: int | None = None
     history: list[ChatTurn] | None = None
     pending_device_command: PendingDeviceCommand | None = None
+    defer_device_execution: bool = False
 
 
 class DeviceCommandRequest(PendingDeviceCommand):
@@ -109,6 +104,21 @@ def chat(payload: ChatRequest) -> dict[str, Any]:
     question = payload.message.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Please enter a question.")
+
+    sensor_data = payload.sensor_data
+    sensor_records = payload.sensor_records
+    sensor_records_total = payload.sensor_records_total
+    if sensor_data is None or sensor_records is None:
+        try:
+            live_data, live_records, live_total = fetch_live_sensor_context()
+        except SensorBackendError as error:
+            raise HTTPException(status_code=502, detail=str(error)) from error
+        if sensor_data is None:
+            sensor_data = live_data
+        if sensor_records is None:
+            sensor_records = live_records
+        if sensor_records_total is None:
+            sensor_records_total = live_total
 
     history = (
         [
@@ -127,9 +137,9 @@ def chat(payload: ChatRequest) -> dict[str, Any]:
     )
     result = chatbot.answer(
         question,
-        sensor_data=payload.sensor_data,
-        sensor_records=payload.sensor_records,
-        sensor_records_total=payload.sensor_records_total,
+        sensor_data=sensor_data,
+        sensor_records=sensor_records,
+        sensor_records_total=sensor_records_total,
         history=history,
         pending_device_context=(
             payload.pending_device_command.model_dump()
@@ -145,7 +155,10 @@ def chat(payload: ChatRequest) -> dict[str, Any]:
         result["quick_replies"] = quick_replies
         result["buttons"] = quick_replies
         result["deviceCommand"] = result["device_command"]
-    if result.get("execute_device_command") is True:
+    if (
+        result.get("execute_device_command") is True
+        and not payload.defer_device_execution
+    ):
         command = result["device_command"]
         try:
             device_result = send_device_command(

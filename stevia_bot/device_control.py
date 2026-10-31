@@ -10,6 +10,7 @@ BACKEND_API_BASE_URL = os.getenv(
 )
 DEVICE_CONTROL_API_URL = f"{BACKEND_API_BASE_URL}device-control"
 DEVICE_STATUS_API_URL = f"{BACKEND_API_BASE_URL}device-status"
+DEVICE_BACKEND_TOKEN = os.getenv("DEVICE_BACKEND_TOKEN", "").strip()
 
 
 class DeviceControlError(Exception):
@@ -19,6 +20,8 @@ class DeviceControlError(Exception):
 
 
 def send_device_command(device: str, action: str) -> dict[str, Any]:
+    if not DEVICE_CONTROL_API_URL:
+        raise DeviceControlError("Device backend is not configured.", 503)
     if device not in {"light", "pump"}:
         raise DeviceControlError(
             "Unsupported device; the connected ESP32 supports only light and pump.",

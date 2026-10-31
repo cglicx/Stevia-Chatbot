@@ -1,5 +1,3 @@
-import os
-
 from flask import Flask, jsonify, render_template, request
 
 from stevia_bot.backend_sensor_data import SensorBackendError, fetch_live_sensor_context
@@ -7,7 +5,7 @@ from stevia_bot.chatbot import SteviaChatbot
 from stevia_bot.device_control import DeviceControlError, send_device_command
 from stevia_bot.knowledge_base import SUGGESTED_QUESTIONS, WELCOME_MESSAGE
 
-app = Flask(__name__)
+app = Flask(_name_)
 chatbot = SteviaChatbot()
 
 
@@ -17,7 +15,6 @@ def index():
         "index.html",
         welcome_message=WELCOME_MESSAGE,
         suggested_questions=SUGGESTED_QUESTIONS,
-        api_base_url=os.getenv("CHAT_API_BASE_URL", "").strip().rstrip("/"),
     )
 
 
@@ -80,7 +77,10 @@ def chat():
         result["quick_replies"] = quick_replies
         result["buttons"] = quick_replies
         result["deviceCommand"] = result["device_command"]
-    if result.get("execute_device_command") is True:
+    if (
+        result.get("execute_device_command") is True
+        and payload.get("defer_device_execution") is not True
+    ):
         command = result["device_command"]
         try:
             device_result = send_device_command(
@@ -117,5 +117,5 @@ def device_command():
         return jsonify({"error": str(error)}), error.status_code
 
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     app.run(host="127.0.0.1", port=5000, debug=True)
